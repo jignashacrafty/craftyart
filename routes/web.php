@@ -8,6 +8,7 @@ use App\Http\Controllers\AudioCategoryController;
 use App\Http\Controllers\AudioItemController;
 use App\Http\Controllers\Automation\AutomationConfigController;
 use App\Http\Controllers\Automation\AutomationReportController;
+use App\Http\Controllers\Automation\AutomationTestController;
 use App\Http\Controllers\Automation\CampaignController;
 use App\Http\Controllers\Automation\EmailTemplateController;
 use App\Http\Controllers\Automation\WhatsAppTemplateController;
@@ -51,6 +52,7 @@ use App\Http\Controllers\OrderUserController;
 use App\Http\Controllers\PageSlugHistoryController;
 use App\Http\Controllers\PaymentConfigController;
 use App\Http\Controllers\PendingTaskController;
+use App\Http\Controllers\PhonePeAutoPayTestController;
 use App\Http\Controllers\PlanMetaDetailsController;
 use App\Http\Controllers\PReviewController;
 use App\Http\Controllers\Pricing\BonusPackageController;
@@ -145,9 +147,11 @@ Route::post('delete_list', [FontListController::class, 'delete'])->name('font_li
 Route::get('show_v_cat', [VideoCatController::class, 'show'])->name('show_v_cat');
 Route::get('delete_v_cat/{id}', [VideoCatController::class, 'destroy']);
 Route::get('create_v_cat', [VideoCatController::class, 'create'])->name('create_v_cat');
-Route::post('submit_v_cat', [VideoCatController::class, 'store'])->name('submit_v_cat');
+Route::post('submit_v_cat', [VideoCatController::class, 'store'])->name('v_cat.store');
 Route::get('edit_v_cat/{id}', [VideoCatController::class, 'edit'])->name('edit_v_cat');
 Route::post('update_v_cat/{id}', [VideoCatController::class, 'update'])->name('v_cat.update');
+Route::post('v_cat_imp/{id}', [VideoCatController::class, 'imp_update'])->name('v_cat.imp');
+Route::post('sendVideoCategoryNotification/{id}', 'App\Http\Controllers\Api\NotificationController@sendVideoCategoryNotification')->name('v_cat.notification');
 
 Route::get('show_v_item', [VideoTemplateController::class, 'show'])->name('show_v_item');
 Route::post('delete_v_item/{id}', [VideoTemplateController::class, 'destroy'])->name('v_item.delete');
@@ -155,6 +159,8 @@ Route::post('create_v_item', [VideoTemplateController::class, 'create'])->name('
 Route::post('submit_v_item', [VideoTemplateController::class, 'store']);
 Route::get('edit_v_item/{id}', [VideoTemplateController::class, 'edit'])->name('edit_v_item');
 Route::post('update_v_item/{id}', [VideoTemplateController::class, 'update'])->name('v_item.update');
+Route::get('edit_seo_v_item/{id}', [VideoTemplateController::class, 'editSeo'])->name('edit_seo_v_item');
+Route::post('update_seo_v_item/{id}', [VideoTemplateController::class, 'updateSeo'])->name('v_item_seo.update');
 
 Route::get('show_cat', [CategoryController::class, 'show'])->name('show_cat');
 Route::get('delete_cat/{id}', [CategoryController::class, 'destroy']);
@@ -342,6 +348,9 @@ Route::get('employee/role/routes/{roleId}', [EmployeeController::class, 'getRout
 
 Route::get('show_users', [UserController::class, 'show'])->name('show_users')->middleware(IsAdmin::class);
 Route::get('user_detail/{id}', [UserController::class, 'user_detail'])->middleware(IsAdmin::class);
+Route::get('/user/personal-details/{uid}', [UserController::class, 'showPersonalDetails'])->name('user.personal_details')->middleware(IsAdmin::class);
+Route::post('/user/personal-details/{uid}', [UserController::class, 'updatePersonalDetails'])->name('user.update_personal_details')->middleware(IsAdmin::class);
+
 
 Route::get('show_packages', [SubscriptionController::class, 'show_package'])->name('show_packages')->middleware(IsAdmin::class);
 Route::post('submit_package', [SubscriptionController::class, 'addPackage'])->middleware(IsAdmin::class);
@@ -362,6 +371,52 @@ Route::get('show_orders', 'App\Http\Controllers\CustomOrder\CustomOrderControlle
 Route::resource('automation_report', AutomationReportController::class)->middleware(IsAdmin::class);
 Route::get('/automation_report/failed-logs/{log_id}', [AutomationReportController::class, 'failedLogs'])->name('automation_report.failed_logs');
 Route::resource('automation_config', AutomationConfigController::class)->middleware(IsAdmin::class);
+
+// Automation Testing Routes
+Route::get('/automation/test', [AutomationTestController::class, 'index'])->name('automation.test.index')->middleware(IsAdmin::class);
+Route::post('/automation/test/email', [AutomationTestController::class, 'testEmail'])->name('automation.test.email')->middleware(IsAdmin::class);
+Route::post('/automation/test/whatsapp', [AutomationTestController::class, 'testWhatsApp'])->name('automation.test.whatsapp')->middleware(IsAdmin::class);
+Route::post('/automation/test/both', [AutomationTestController::class, 'testBoth'])->name('automation.test.both')->middleware(IsAdmin::class);
+Route::get('/automation/test/template-preview', [AutomationTestController::class, 'getTemplatePreview'])->name('automation.test.template-preview')->middleware(IsAdmin::class);
+
+// PhonePe AutoPay Testing Routes
+Route::get('/phonepe/autopay/test', [PhonePeAutoPayTestController::class, 'index'])->name('phonepe.autopay.test.index')->middleware(IsAdmin::class);
+Route::post('/phonepe/autopay/test/create', [PhonePeAutoPayTestController::class, 'createTestSubscription'])->name('phonepe.autopay.test.create')->middleware(IsAdmin::class);
+Route::get('/phonepe/autopay/test/status', [PhonePeAutoPayTestController::class, 'checkSubscriptionStatus'])->name('phonepe.autopay.test.status')->middleware(IsAdmin::class);
+Route::post('/phonepe/autopay/test/predebit', [PhonePeAutoPayTestController::class, 'triggerPreDebitNotification'])->name('phonepe.autopay.test.predebit')->middleware(IsAdmin::class);
+Route::post('/phonepe/autopay/test/debit', [PhonePeAutoPayTestController::class, 'triggerAutoDebit'])->name('phonepe.autopay.test.debit')->middleware(IsAdmin::class);
+Route::get('/phonepe/autopay/test/list', [PhonePeAutoPayTestController::class, 'getAllSubscriptions'])->name('phonepe.autopay.test.list')->middleware(IsAdmin::class);
+Route::post('/phonepe/autopay/test/delete', [PhonePeAutoPayTestController::class, 'deleteTestSubscription'])->name('phonepe.autopay.test.delete')->middleware(IsAdmin::class);
+
+// PhonePe AutoPay Callback & Webhook Routes (without middleware for PhonePe to access)
+Route::any('/phonepe/autopay/callback', [PhonePeAutoPayTestController::class, 'handleCallback'])->name('phonepe.autopay.callback')->withoutMiddleware([\App\Http\Middleware\Authenticate::class]);
+Route::any('/phonepe/autopay/webhook', [PhonePeAutoPayTestController::class, 'handleWebhook'])->name('phonepe.autopay.webhook')->withoutMiddleware([\App\Http\Middleware\Authenticate::class]);
+
+// PhonePe Simple Payment Test (sends immediate payment request to UPI)
+Route::get('/phonepe/simple-payment-test', function() {
+    return view('phonepe_simple_payment_test');
+})->name('phonepe.simple_payment_test')->middleware(IsAdmin::class);
+
+Route::post('/phonepe/send-payment-request', [App\Http\Controllers\PhonePeSimplePaymentTestController::class, 'sendPaymentRequest'])->name('phonepe.send_payment_request')->middleware(IsAdmin::class);
+Route::post('/phonepe/check-subscription-status', [App\Http\Controllers\PhonePeSimplePaymentTestController::class, 'checkSubscriptionStatus'])->name('phonepe.check_subscription_status')->middleware(IsAdmin::class);
+Route::post('/phonepe/send-predebit', [App\Http\Controllers\PhonePeSimplePaymentTestController::class, 'sendPreDebitNotification'])->name('phonepe.send_predebit')->middleware(IsAdmin::class);
+Route::post('/phonepe/trigger-autodebit', [App\Http\Controllers\PhonePeSimplePaymentTestController::class, 'triggerAutoDebit'])->name('phonepe.trigger_autodebit')->middleware(IsAdmin::class);
+Route::post('/phonepe/simulate-autodebit', [App\Http\Controllers\PhonePeSimplePaymentTestController::class, 'simulateAutoDebit'])->name('phonepe.simulate_autodebit')->middleware(IsAdmin::class);
+Route::get('/phonepe/get-history', [App\Http\Controllers\PhonePeSimplePaymentTestController::class, 'getHistory'])->name('phonepe.get_history')->middleware(IsAdmin::class);
+
+// PhonePe Dashboard & Management
+Route::get('/phonepe/dashboard', [App\Http\Controllers\PhonePeDashboardController::class, 'index'])->name('phonepe.dashboard')->middleware(IsAdmin::class);
+
+Route::get('/phonepe/transactions', [App\Http\Controllers\PhonePeTransactionController::class, 'index'])->name('phonepe.transactions.index')->middleware(IsAdmin::class);
+Route::get('/phonepe/transactions/{id}', [App\Http\Controllers\PhonePeTransactionController::class, 'show'])->name('phonepe.transactions.show')->middleware(IsAdmin::class);
+Route::get('/phonepe/transactions/{id}/notifications', [App\Http\Controllers\PhonePeTransactionController::class, 'notifications'])->name('phonepe.transactions.notifications')->middleware(IsAdmin::class);
+Route::post('/phonepe/transactions/{id}/check-status', [App\Http\Controllers\PhonePeTransactionController::class, 'checkStatus'])->name('phonepe.transactions.check_status')->middleware(IsAdmin::class);
+
+Route::get('/phonepe/notifications', [App\Http\Controllers\PhonePeNotificationController::class, 'index'])->name('phonepe.notifications.index')->middleware(IsAdmin::class);
+Route::get('/phonepe/notifications/{id}', [App\Http\Controllers\PhonePeNotificationController::class, 'show'])->name('phonepe.notifications.show')->middleware(IsAdmin::class);
+
+// PhonePe Webhook (public endpoint for PhonePe to call)
+Route::any('/api/phonepe/webhook', [App\Http\Controllers\PhonePeWebhookController::class, 'handleWebhook'])->name('phonepe.webhook');
 
 Route::get('notification_setting', [NotificationController::class, 'showNotificationSetting'])->name('notification_setting')->middleware(IsAdmin::class);
 Route::post('update_notification/{id}', [NotificationController::class, 'updateNotificationSetting'])->name('notification.update')->middleware(IsAdmin::class);
@@ -447,6 +502,7 @@ Route::middleware(IsAdmin::class)->prefix('payment_configuration')->group(functi
     Route::post('/add-gateway', [PaymentConfigController::class, 'addNewGateway'])->name('payment.config.add-gateway');
     Route::get('/{id}/get', [PaymentConfigController::class, 'getGateway'])->name('payment.config.get');
     Route::post('/{id}/update', [PaymentConfigController::class, 'updateGateway'])->name('payment.config.update');
+    Route::post('/{id}/activate', [PaymentConfigController::class, 'activate'])->name('payment.config.activate');
     Route::delete('/{id}', [PaymentConfigController::class, 'destroy'])->name('payment.config.destroy');
 });
 
@@ -609,93 +665,54 @@ Route::get('email-template/preview-order/{id}', [\App\Http\Controllers\Api\Autom
 Route::resource('recent_expire', RecentExpireController::class)->middleware(IsSalesAccess::class);
 Route::post('/recent-expire/followup-update', [RecentExpireController::class, 'followupUpdate'])->name('recent_expire.followupUpdate');
 
+// Payment Link Public Routes (No Authentication Required - Accessible by customers)
+Route::get('/payment-link/callback', [OrderUserController::class, 'paymentLinkCallback'])
+    ->name('payment_link.callback')
+    ->withoutMiddleware([\App\Http\Middleware\Authenticate::class]);
+    
+Route::get('/payment-link/phonepe-callback', [OrderUserController::class, 'phonePePaymentLinkCallback'])
+    ->name('payment_link.phonepe_callback')
+    ->withoutMiddleware([\App\Http\Middleware\Authenticate::class]);
+    
+Route::post('/payment-link/phonepe-callback', [OrderUserController::class, 'phonePePaymentLinkCallback'])
+    ->name('payment_link.phonepe_callback_post')
+    ->withoutMiddleware([\App\Http\Middleware\Authenticate::class]);
+    
+Route::get('/payment-success', [OrderUserController::class, 'paymentSuccess'])
+    ->name('payment.success')
+    ->withoutMiddleware([\App\Http\Middleware\Authenticate::class]);
+    
+Route::get('/payment-failed', [OrderUserController::class, 'paymentFailed'])
+    ->name('payment.failed')
+    ->withoutMiddleware([\App\Http\Middleware\Authenticate::class]);
+
+// Order User Routes (Requires Sales Access)
 Route::resource('order_user', OrderUserController::class)->middleware(IsSalesAccess::class);
 Route::post('/order-user/followup-update', [OrderUserController::class, 'followupUpdate'])->name('order_user.followupUpdate');
+Route::get('/order-user/get-user-usage', [OrderUserController::class, 'getUserUsage'])->name('order_user.get_user_usage');
+Route::get('/order-user/purchase-history/{userId}', [OrderUserController::class, 'getPurchaseHistory'])->name('order_user.purchase_history');
+Route::get('/order-user/get-plans', [OrderUserController::class, 'getPlans'])->name('order_user.get_plans');
+Route::post('/order-user/validate-email', [OrderUserController::class, 'validateEmail'])->name('order_user.validate_email');
+Route::post('/order-user/create-payment-link', [OrderUserController::class, 'createPaymentLink'])->name('order_user.create_payment_link');
+
+// Payment status check APIs (for testing/admin)
+Route::get('/order-user/check-phonepe-status/{merchantOrderId}', [OrderUserController::class, 'checkPhonePeStatusApi'])->name('order_user.check_phonepe_status');
+Route::get('/order-user/check-razorpay-status/{paymentLinkId}', [OrderUserController::class, 'checkRazorpayStatusApi'])->name('order_user.check_razorpay_status');
+
+// PhonePe custom payment page routes
+Route::get('/phonepe-payment/{referenceId}', [OrderUserController::class, 'showPhonePePaymentPage'])->name('phonepe.payment_page');
+Route::post('/phonepe-payment/initiate', [OrderUserController::class, 'initiatePhonePePayment'])->name('phonepe.initiate_payment');
+
 
 // API route for polling new orders (real-time updates)
 // API route for polling new orders (real-time updates)
 Route::get('/api/get-new-orders', [App\Http\Controllers\Api\OrderApiController::class, 'getNewOrders'])->name('api.get_new_orders');
 
-// Test route to create a test order (for testing real-time updates)
-Route::get('/test-create-order', function() {
-    try {
-        // Generate unique razorpay_order_id
-        $razorpayOrderId = 'TEST_ORDER_' . time() . '_' . rand(1000, 9999);
-        
-        $order = \App\Models\Order::create([
-            'user_id' => 'test_user_' . time(),
-            'plan_id' => '1', // Default plan ID
-            'contact_no' => '9999999999',
-            'razorpay_order_id' => $razorpayOrderId,
-            'currency' => 'INR',
-            'amount' => rand(99, 999),
-            'paid' => 0,
-            'status' => 'pending', // This will trigger real-time update
-            'type' => 'new_sub',
-            'is_deleted' => 0,
-            'email_template_count' => 0,
-            'whatsapp_template_count' => 0,
-            'followup_call' => 0,
-        ]);
-        
-        return '<html>
-        <head>
-            <title>Test Order Created</title>
-            <style>
-                body { font-family: Arial, sans-serif; padding: 40px; background: #f5f5f5; }
-                .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-                h1 { color: #28a745; }
-                .info { background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0; }
-                .info p { margin: 5px 0; }
-                .btn { display: inline-block; padding: 10px 20px; margin: 10px 5px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; }
-                .btn:hover { background: #0056b3; }
-                .btn-success { background: #28a745; }
-                .btn-success:hover { background: #218838; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>✅ Test Order Created Successfully!</h1>
-                <div class="info">
-                    <p><strong>Order ID:</strong> ' . $order->id . '</p>
-                    <p><strong>Razorpay Order ID:</strong> ' . $order->razorpay_order_id . '</p>
-                    <p><strong>Amount:</strong> ₹' . $order->amount . '</p>
-                    <p><strong>Status:</strong> ' . $order->status . '</p>
-                    <p><strong>Type:</strong> ' . $order->type . '</p>
-                    <p><strong>Created At:</strong> ' . $order->created_at . '</p>
-                </div>
-                <p><strong>✨ Check your order_user page - the new order should appear automatically within 5 seconds!</strong></p>
-                <a href="' . url('/order_user') . '" class="btn btn-success" target="_blank">📋 Open Order User Page</a>
-                <a href="' . url('/test-create-order') . '" class="btn">🔄 Create Another Test Order</a>
-            </div>
-        </body>
-        </html>';
-        
-    } catch (\Exception $e) {
-        return '<html>
-        <head>
-            <title>Error</title>
-            <style>
-                body { font-family: Arial, sans-serif; padding: 40px; background: #f5f5f5; }
-                .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-                h1 { color: #dc3545; }
-                .error { background: #f8d7da; padding: 15px; border-radius: 5px; margin: 20px 0; color: #721c24; }
-                .btn { display: inline-block; padding: 10px 20px; margin: 10px 5px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>❌ Error Creating Test Order</h1>
-                <div class="error">
-                    <p><strong>Error Message:</strong></p>
-                    <p>' . $e->getMessage() . '</p>
-                </div>
-                <a href="' . url('/test-create-order') . '" class="btn">🔄 Try Again</a>
-            </div>
-        </body>
-        </html>';
-    }
-});
+// API route for checking order status changes (real-time updates)
+Route::post('/api/check-order-status', [App\Http\Controllers\Api\OrderApiController::class, 'checkOrderStatusChanges'])->name('api.check_order_status');
+
+// Combined API for syncing orders (new + status changes in one call)
+Route::post('/api/sync-orders', [App\Http\Controllers\Api\OrderApiController::class, 'syncOrders'])->name('api.sync_orders');
 
 Route::get('get-options/{table}/{idColumn}/{nameColumn}', function ($table, $idColumn, $nameColumn) {
     return DB::table($table)->select($idColumn, $nameColumn)->get();
@@ -754,5 +771,89 @@ Route::get('/clear-trending', function () {
 })->middleware(IsAdmin::class);
 
 Route::get('seo_error_list', [SeoErrorListController::class, 'index'])->name('seo_error_list')->middleware(IsSeoAccess::class);
-
-
+// SSE endpoint for real-time order updates
+Route::get('/order-updates-stream', function() {
+    return response()->stream(function() {
+        // Set headers for SSE
+        echo "data: " . json_encode(['type' => 'connected', 'message' => 'SSE Stream connected']) . "\n\n";
+        ob_flush();
+        flush();
+        
+        $lastOrderId = (int) request()->get('last_id', 0);
+        
+        while (true) {
+            try {
+                // Check for new orders
+                $newOrders = \App\Models\Order::where('id', '>', $lastOrderId)
+                    ->whereIn('status', ['pending', 'failed'])
+                    ->where('is_deleted', 0)
+                    ->orderBy('id', 'asc')
+                    ->limit(10)
+                    ->get();
+                
+                if ($newOrders->count() > 0) {
+                    foreach ($newOrders as $order) {
+                        // Get user data safely
+                        $user = $order->user;
+                        
+                        $orderData = [
+                            'type' => 'new_order',
+                            'order' => [
+                                'id' => $order->id,
+                                'user_id' => $order->user_id ?? 'unknown',
+                                'user_name' => $user ? $user->name : '-',
+                                'email' => $user ? $user->email : '-',
+                                'contact_no' => $order->contact_no ?? ($user ? $user->contact_no : '-'),
+                                'amount' => $order->amount ?? '0',
+                                'amount_with_symbol' => '₹' . ($order->amount ?? '0'),
+                                'currency' => $order->currency ?? 'INR',
+                                'status' => $order->status ?? 'pending',
+                                'type' => $order->type ?? 'old_sub',
+                                'plan_items' => '-',
+                                'is_subscription_active' => false,
+                                'created_at' => $order->created_at ? $order->created_at->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s'),
+                                'email_template_count' => $order->email_template_count ?? 0,
+                                'whatsapp_template_count' => $order->whatsapp_template_count ?? 0,
+                                'from_where' => '-',
+                                'followup_call' => $order->followup_call ?? 0,
+                                'follow_by' => '-',
+                                'emp_id' => $order->emp_id ?? 0,
+                            ]
+                        ];
+                        
+                        echo "data: " . json_encode($orderData) . "\n\n";
+                        $lastOrderId = $order->id;
+                        
+                        \Log::info('SSE: Sent new order', ['order_id' => $order->id]);
+                    }
+                    
+                    ob_flush();
+                    flush();
+                }
+                
+                // Sleep for 1 second before checking again
+                sleep(1);
+                
+                // Check if connection is still alive
+                if (connection_aborted()) {
+                    \Log::info('SSE: Connection aborted');
+                    break;
+                }
+                
+            } catch (\Exception $e) {
+                \Log::error('SSE Error', ['error' => $e->getMessage()]);
+                echo "data: " . json_encode(['type' => 'error', 'message' => $e->getMessage()]) . "\n\n";
+                ob_flush();
+                flush();
+                break;
+            }
+        }
+    }, 200, [
+        'Content-Type' => 'text/event-stream',
+        'Cache-Control' => 'no-cache',
+        'Connection' => 'keep-alive',
+        'X-Accel-Buffering' => 'no',
+        'Access-Control-Allow-Origin' => '*',
+        'Access-Control-Allow-Headers' => 'Cache-Control',
+    ]);
+});
