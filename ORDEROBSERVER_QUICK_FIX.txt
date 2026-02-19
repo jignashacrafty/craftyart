@@ -1,0 +1,193 @@
+================================================================================
+                    ORDEROBSERVER LIVE SERVER QUICK FIX
+================================================================================
+
+PROBLEM: OrderObserver works locally but not on live server
+
+SOLUTION: Follow these steps in order
+
+================================================================================
+                            STEP 1: CHECK .ENV
+================================================================================
+
+Run this command:
+  cat .env | grep BROADCAST
+
+Should show:
+  BROADCAST_DRIVER=pusher
+  PUSHER_HOST=your-domain.com    <-- NOT 127.0.0.1!
+  PUSHER_PORT=6001
+
+If wrong, fix it:
+  nano .env
+  (Change BROADCAST_DRIVER=pusher and PUSHER_HOST=your-domain.com)
+  (Save: Ctrl+X, Y, Enter)
+
+================================================================================
+                        STEP 2: CLEAR ALL CACHE
+================================================================================
+
+Run these commands:
+  php artisan config:clear
+  php artisan cache:clear
+  php artisan route:clear
+  php artisan view:clear
+  composer dump-autoload
+
+================================================================================
+                    STEP 3: START WEBSOCKET SERVER
+================================================================================
+
+Check if running:
+  ps aux | grep websockets:serve
+
+If not running, start it:
+  nohup php artisan websockets:serve > /dev/null 2>&1 &
+
+Verify it's running:
+  ps aux | grep websockets:serve
+  netstat -tulpn | grep 6001
+
+================================================================================
+                        STEP 4: RUN TEST SCRIPT
+================================================================================
+
+Run the test:
+  php test_observer_live.php
+
+This will:
+  ✅ Check if Observer is registered
+  ✅ Check BROADCAST_DRIVER
+  ✅ Check WebSocket server
+  ✅ Create test order
+  ✅ Check logs
+
+================================================================================
+                        STEP 5: CHECK LOGS
+================================================================================
+
+Watch logs in real-time:
+  tail -f storage/logs/laravel.log | grep OrderObserver
+
+You should see:
+  OrderObserver: Broadcasting new order
+  WebSocketBroadcast: Sending direct HTTP API request
+  WebSocketBroadcast: Direct HTTP API success
+
+If you DON'T see these messages, Observer is not firing!
+
+================================================================================
+                        STEP 6: VERIFY OBSERVER
+================================================================================
+
+Check AppServiceProvider:
+  cat app/Providers/AppServiceProvider.php | grep OrderObserver
+
+Should show:
+  \App\Models\Order::observe(\App\Observers\OrderObserver::class);
+
+If NOT found, add it manually:
+  nano app/Providers/AppServiceProvider.php
+  
+  Add this line in boot() method:
+  \App\Models\Order::observe(\App\Observers\OrderObserver::class);
+
+================================================================================
+                        COMMON ISSUES & FIXES
+================================================================================
+
+ISSUE 1: Observer not firing
+FIX:
+  - Check AppServiceProvider has Observer registration
+  - Clear cache: php artisan config:clear
+  - Restart PHP-FPM: sudo service php8.1-fpm restart
+
+ISSUE 2: WebSocket server not running
+FIX:
+  - Start it: nohup php artisan websockets:serve > /dev/null 2>&1 &
+  - Check port: netstat -tulpn | grep 6001
+
+ISSUE 3: BROADCAST_DRIVER wrong
+FIX:
+  - Edit .env: BROADCAST_DRIVER=pusher
+  - Clear cache: php artisan config:clear
+
+ISSUE 4: PUSHER_HOST is 127.0.0.1
+FIX:
+  - Edit .env: PUSHER_HOST=your-domain.com
+  - Clear cache: php artisan config:clear
+  - Restart WebSocket: pkill -f "websockets:serve" && nohup php artisan websockets:serve > /dev/null 2>&1 &
+
+================================================================================
+                        NUCLEAR OPTION (IF NOTHING WORKS)
+================================================================================
+
+Run ALL these commands:
+
+# Stop everything
+pkill -f "websockets:serve"
+
+# Clear everything
+php artisan config:clear
+php artisan cache:clear
+php artisan route:clear
+php artisan view:clear
+composer dump-autoload
+
+# Fix .env
+nano .env
+# Set: BROADCAST_DRIVER=pusher
+# Set: PUSHER_HOST=your-domain.com
+# Save and exit
+
+# Restart PHP-FPM (if applicable)
+sudo service php8.1-fpm restart
+
+# Start WebSocket server
+nohup php artisan websockets:serve > /dev/null 2>&1 &
+
+# Test
+php test_observer_live.php
+
+# Watch logs
+tail -f storage/logs/laravel.log | grep OrderObserver
+
+================================================================================
+                            VERIFICATION
+================================================================================
+
+Create a real order and check:
+
+1. Logs should show:
+   ✅ OrderObserver: Broadcasting new order
+
+2. WebSocket should show:
+   ✅ WebSocketBroadcast: Direct HTTP API success
+
+3. Frontend should receive:
+   ✅ new-order-created event
+
+If ALL three work, you're done! 🎉
+
+================================================================================
+                            NEED HELP?
+================================================================================
+
+Still not working? Check:
+
+1. Is Observer registered?
+   cat app/Providers/AppServiceProvider.php | grep OrderObserver
+
+2. Is BROADCAST_DRIVER correct?
+   cat .env | grep BROADCAST_DRIVER
+
+3. Is WebSocket server running?
+   ps aux | grep websockets:serve
+
+4. Are logs showing Observer calls?
+   tail -f storage/logs/laravel.log | grep OrderObserver
+
+5. Is order being created via Eloquent?
+   (Not raw DB queries - Observer only works with Eloquent!)
+
+================================================================================

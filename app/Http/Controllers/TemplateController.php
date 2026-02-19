@@ -37,6 +37,7 @@ use App\Models\Size;
 use DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class TemplateController extends AppBaseController
@@ -962,18 +963,38 @@ class TemplateController extends AppBaseController
 
     public function update_seo(Request $request, Design $design)
     {
-        $additional_thumb = $request->file('additional_thumb');
-        if ($additional_thumb) {
-            $this->validate($request, ['additional_thumb' => 'required|image|mimes:jpg,png,gif,webp|max:2048']);
-        }
+        try {
+            
+            if ($request->hasFile('post_thumb')) {
+                $file = $request->file('post_thumb');
+                
+            }
+            
+            if ($request->hasFile('additional_thumb')) {
+                $file = $request->file('additional_thumb');
+            }
+            
+            $post_thumb = $request->file('post_thumb');
+            $additional_thumb = $request->file('additional_thumb');
 
-        $pageNumbers = $request->input('design_page_number');
-        $currentuserid = Auth::user()->id;
-        $idAdmin = RoleManager::isAdminOrSeoManager(Auth::user()->user_type);
+            
+            if ($post_thumb) {
+                $this->validate($request, ['post_thumb' => 'required|image|mimes:jpg,png,gif,webp,jpeg|max:2048']);
+            }
+            if ($additional_thumb) {
+                $this->validate($request, ['additional_thumb' => 'required|image|mimes:jpg,png,gif,webp,jpeg|max:2048']);
+            }
 
-        $res = Design::find($request->id);
-        if (!$res)
-            return response()->json(['error' => "Data not found"]);
+            $pageNumbers = $request->input('design_page_number');
+            $currentuserid = Auth::user()->id;
+            $idAdmin = RoleManager::isAdminOrSeoManager(Auth::user()->user_type);
+
+            $res = Design::find($request->id);
+            Log::info('Design ID from route: ' . $request->id);
+            Log::info('Design found: ' . ($res ? 'YES' : 'NO'));
+            
+            if (!$res)
+                return response()->json(['error' => "Data not found"]);
 
         $id_name = $request->input('id_name');
         $canonical_link = $request->input('canonical_link');
@@ -1144,13 +1165,28 @@ class TemplateController extends AppBaseController
         }
 
         if ($additional_thumb) {
+            Log::info('Deleting old additional_thumb: ' . $res->additional_thumb);
             StorageUtils::delete($res->additional_thumb);
             $new_name = bin2hex(random_bytes(20)) . Carbon::now()->timestamp . '.' . $additional_thumb->getClientOriginalExtension();
+            Log::info('Storing new additional_thumb: uploadedFiles/thumb_file/' . $new_name);
             StorageUtils::storeAs($additional_thumb, 'uploadedFiles/thumb_file', $new_name);
             $res->additional_thumb = 'uploadedFiles/thumb_file/' . $new_name;
+            Log::info('Additional thumb saved successfully: ' . $res->additional_thumb);
         }
 
+        if ($post_thumb) {
+            if ($res->post_thumb) {
+                StorageUtils::delete($res->post_thumb);
+            }
+            $new_name = bin2hex(random_bytes(20)) . Carbon::now()->timestamp . '.' . $post_thumb->getClientOriginalExtension();
+            StorageUtils::storeAs($post_thumb, 'uploadedFiles/thumb_file', $new_name);
+            $res->post_thumb = 'uploadedFiles/thumb_file/' . $new_name;
+        }
+
+        Log::info('About to save Design record...');
         $res->save();
+        Log::info('Design record saved successfully!');
+        
         self::clearCacheByTag($request->input('special_keywords'), $oldSpecialKeywords);
         self::updateDesignCount($res->new_category_id, $oldNewCategoryID, newTags: $newTags, oldTags: $oldSearchTag);
         HelperController::newCatChildUpdatedAt($res->new_category_id);
@@ -1161,7 +1197,16 @@ class TemplateController extends AppBaseController
             'type' => 1,
         ]);
 
+        Log::info('=== UPDATE_SEO COMPLETED SUCCESSFULLY ===');
         return response()->json(['success' => 'Done']);
+        
+        } catch (\Exception $e) {
+            Log::error('=== UPDATE_SEO ERROR ===');
+            Log::error('Error Message: ' . $e->getMessage());
+            Log::error('Error File: ' . $e->getFile() . ' Line: ' . $e->getLine());
+            Log::error('Stack Trace: ' . $e->getTraceAsString());
+            return response()->json(['error' => 'An error occurred: ' . $e->getMessage()], 500);
+        }
     }
 
     public function destroy(Request $request)

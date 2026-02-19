@@ -403,12 +403,6 @@
                             'edit_font',
                             'font_families',
                             'font_list',
-                            'show_v_cat',
-                            'show_v_item',
-                            'create_v_cat',
-                            'edit_v_cat',
-                            'create_v_item',
-                            'edit_v_item',
                         ])
                             ? 'show'
                             : '' }}">
@@ -441,12 +435,6 @@
                                 'edit_font',
                                 'font_families',
                                 'font_list',
-                                'show_v_cat',
-                                'show_v_item',
-                                'create_v_cat',
-                                'edit_v_cat',
-                                'create_v_item',
-                                'edit_v_item',
                             ])
                                 ? 'block'
                                 : 'none' }};">
@@ -603,31 +591,6 @@
                                     </ul>
                                 </li>
 
-                                {{-- Video --}}
-                                <li
-                                        class="dropdown {{ in_array(Route::currentRouteName(), ['video_cat.index', 'video_item.index']) ? 'show' : '' }}">
-                                    <a href="javascript:;" class="dropdown-toggle">
-                                            <span class="micon"><img
-                                                        src="{{ asset('assets/vendors/images/menu_icon/Video.svg') }}"
-                                                        alt=""></span>
-                                        <span class="mtext">Video</span>
-                                    </a>
-                                    <ul class="submenu child">
-                                        <li><a href="{{ route('video_cat.index') }}"
-                                               class="{{ Route::currentRouteName() == 'video_cat.index' ? 'selectSubMenu' : '' }}">
-                                                    <span class="micon"><img
-                                                                src="{{ asset('assets/vendors/images/menu_icon/Category.svg') }}"
-                                                                alt=""></span>
-                                                Category</a></li>
-                                        <li><a href="{{ route('video_item.index') }}"
-                                               class="{{ Route::currentRouteName() == 'video_item.index' ? 'selectSubMenu' : '' }}">
-                                                    <span class="micon"><img
-                                                                src="{{ asset('assets/vendors/images/menu_icon/Item.svg') }}"
-                                                                alt=""></span>
-                                                Item</a></li>
-                                    </ul>
-                                </li>
-
                                 {{-- Gif --}}
                                 <li
                                         class="dropdown {{ in_array(Route::currentRouteName(), ['gif_categories.index', 'gif_items.index']) ? 'show' : '' }}">
@@ -699,27 +662,47 @@
                                         Font List</a></li>
                             </ul>
                         </li>
-
-                        <li
-                                class="dropdown {{ Route::currentRouteName() == 'show_v_cat' || Route::currentRouteName() == 'show_v_item' || Route::currentRouteName() == 'create_v_cat' || Route::currentRouteName() == 'edit_v_cat' || Route::currentRouteName() == 'create_v_item' || Route::currentRouteName() == 'edit_v_item' ? 'show' : '' }}">
-                            <a href="javascript:;" class="dropdown-toggle">
-                                    <span class="micon"><img
-                                                src="{{ asset('assets/vendors/images/menu_icon/Video.svg') }}"
-                                                alt=""></span><span class="mtext">Video</span>
-                            </a>
-                            <ul class="submenu"
-                                style="display:{{ Route::currentRouteName() == 'show_v_cat' || Route::currentRouteName() == 'show_v_item' || Route::currentRouteName() == 'create_v_cat' || Route::currentRouteName() == 'edit_v_cat' || Route::currentRouteName() == 'create_v_item' || Route::currentRouteName() == 'edit_v_item' ? 'block' : 'none' }};">
-                                <li><a href="{{ route('show_v_cat') }}"
-                                       class="{{ Route::currentRouteName() == 'show_v_cat' || Route::currentRouteName() == 'create_v_cat' || Route::currentRouteName() == 'edit_v_cat' ? 'selectSubMenu' : '' }}">Categories</a>
-                                </li>
-                                <li><a href="{{ route('show_v_item') }}"
-                                       class="{{ Route::currentRouteName() == 'show_v_item' || Route::currentRouteName() == 'create_v_item' || Route::currentRouteName() == 'edit_v_item' ? 'selectSubMenu' : '' }}">Templates</a>
-                                </li>
-                            </ul>
-                        </li>
                     </ul>
                 </li>
                 @endif
+                @endif
+
+                {{-- SEO Executive and SEO Manager Video Access --}}
+                @if ($roleManager::isAdminOrSeoManager(Auth::user()->user_type) || $roleManager::isSeoExecutive(Auth::user()->user_type))
+                <li
+                    class="dropdown {{ in_array(Route::currentRouteName(), [
+                        'show_v_cat',
+                        'show_v_item',
+                        'create_v_cat',
+                        'edit_v_cat',
+                        'edit_seo_v_item',
+                    ])
+                        ? 'show'
+                        : '' }}">
+                    <a href="javascript:;" class="dropdown-toggle">
+                            <span class="micon"><img
+                                        src="{{ asset('assets/vendors/images/menu_icon/Video.svg') }}"
+                                        alt=""></span>
+                        <span class="mtext">Video</span>
+                    </a>
+                    <ul class="submenu"
+                        style="display: {{ in_array(Route::currentRouteName(), [
+                                'show_v_cat',
+                                'show_v_item',
+                                'create_v_cat',
+                                'edit_v_cat',
+                                'edit_seo_v_item',
+                            ])
+                                ? 'block'
+                                : 'none' }};">
+                        <li><a href="{{ route('show_v_cat') }}"
+                               class="{{ Route::currentRouteName() == 'show_v_cat' || Route::currentRouteName() == 'create_v_cat' || Route::currentRouteName() == 'edit_v_cat' ? 'selectSubMenu' : '' }}">Categories</a>
+                        </li>
+                        <li><a href="{{ route('show_v_item') }}"
+                               class="{{ Route::currentRouteName() == 'show_v_item' || Route::currentRouteName() == 'edit_seo_v_item' ? 'selectSubMenu' : '' }}">Templates</a>
+                        </li>
+                    </ul>
+                </li>
                 @endif
 
                 @if ($roleManager::isAdmin(Auth::user()->user_type))
@@ -1068,6 +1051,127 @@
                                 <i class="icon-copy fa fa-bell" style="margin-right: 8px;"></i> Notifications
                             </a>
                         </li>
+                    </ul>
+                </li>
+                
+                {{-- Designer System Menu --}}
+                <li class="dropdown {{ in_array(Route::currentRouteName(), [
+                    'designer_system.applications',
+                    'designer_system.designers',
+                    'designer_system.design_submissions',
+                    'designer_system.seo_submissions',
+                    'designer_system.withdrawals',
+                    'designer_system.wallet_settings',
+                    'designer_system.types',
+                    'designer_system.categories',
+                    'designer_system.goals',
+                ]) ? 'show' : '' }}">
+                    <a href="javascript:;" class="dropdown-toggle">
+                        <span class="micon">
+                            <img src="{{ asset('assets/vendors/images/menu_icon/Users.svg') }}" alt="">
+                        </span>
+                        <span class="mtext">Designer System</span>
+                    </a>
+                    <ul class="submenu" style="display:{{ in_array(Route::currentRouteName(), [
+                        'designer_system.applications',
+                        'designer_system.designers',
+                        'designer_system.design_submissions',
+                        'designer_system.seo_submissions',
+                        'designer_system.withdrawals',
+                        'designer_system.wallet_settings',
+                        'designer_system.types',
+                        'designer_system.categories',
+                        'designer_system.goals',
+                    ]) ? 'block' : 'none' }};">
+                        
+                        {{-- Designer Applications --}}
+                        <li>
+                            <a href="{{ route('designer_system.applications') }}"
+                               class="{{ Route::currentRouteName() == 'designer_system.applications' ? 'selectSubMenu' : '' }}">
+                                <i class="fa fa-file-text"></i> Applications
+                            </a>
+                        </li>
+                        
+                        {{-- All Designers --}}
+                        <li>
+                            <a href="{{ route('designer_system.designers') }}"
+                               class="{{ Route::currentRouteName() == 'designer_system.designers' ? 'selectSubMenu' : '' }}">
+                                <i class="fa fa-users"></i> All Designers
+                            </a>
+                        </li>
+                        
+                        {{-- Design Submissions (Designer Head) --}}
+                        @if ($roleManager::isAdmin(Auth::user()->user_type) || $roleManager::isDesignerManager(Auth::user()->user_type))
+                        <li>
+                            <a href="{{ route('designer_system.design_submissions') }}"
+                               class="{{ Route::currentRouteName() == 'designer_system.design_submissions' ? 'selectSubMenu' : '' }}">
+                                <i class="fa fa-paint-brush"></i> Design Submissions
+                            </a>
+                        </li>
+                        @endif
+                        
+                        {{-- SEO Submissions (SEO Head) --}}
+                        @if ($roleManager::isAdmin(Auth::user()->user_type) || $roleManager::onlySeoAccess(Auth::user()->user_type))
+                        <li>
+                            <a href="{{ route('designer_system.seo_submissions') }}"
+                               class="{{ Route::currentRouteName() == 'designer_system.seo_submissions' ? 'selectSubMenu' : '' }}">
+                                <i class="fa fa-search"></i> SEO Submissions
+                            </a>
+                        </li>
+                        @endif
+                        
+                        {{-- Withdrawals (Admin) --}}
+                        @if ($roleManager::isAdmin(Auth::user()->user_type))
+                        <li>
+                            <a href="{{ route('designer_system.withdrawals') }}"
+                               class="{{ Route::currentRouteName() == 'designer_system.withdrawals' ? 'selectSubMenu' : '' }}">
+                                <i class="fa fa-money"></i> Withdrawals
+                            </a>
+                        </li>
+                        
+                        {{-- System Settings Dropdown --}}
+                        <li class="dropdown {{ in_array(Route::currentRouteName(), [
+                            'designer_system.wallet_settings',
+                            'designer_system.types',
+                            'designer_system.categories',
+                            'designer_system.goals',
+                        ]) ? 'show' : '' }}">
+                            <a href="javascript:;" class="dropdown-toggle">
+                                <i class="fa fa-cog"></i> System Settings
+                            </a>
+                            <ul class="submenu" style="display:{{ in_array(Route::currentRouteName(), [
+                                'designer_system.wallet_settings',
+                                'designer_system.types',
+                                'designer_system.categories',
+                                'designer_system.goals',
+                            ]) ? 'block' : 'none' }};">
+                                <li>
+                                    <a href="{{ route('designer_system.wallet_settings') }}"
+                                       class="{{ Route::currentRouteName() == 'designer_system.wallet_settings' ? 'selectSubMenu' : '' }}">
+                                        <i class="fa fa-wallet"></i> Wallet Settings
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ route('designer_system.types') }}"
+                                       class="{{ Route::currentRouteName() == 'designer_system.types' ? 'selectSubMenu' : '' }}">
+                                        <i class="fa fa-tags"></i> Designer Types
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ route('designer_system.categories') }}"
+                                       class="{{ Route::currentRouteName() == 'designer_system.categories' ? 'selectSubMenu' : '' }}">
+                                        <i class="fa fa-folder"></i> Categories
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ route('designer_system.goals') }}"
+                                       class="{{ Route::currentRouteName() == 'designer_system.goals' ? 'selectSubMenu' : '' }}">
+                                        <i class="fa fa-bullseye"></i> Goals
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        @endif
                     </ul>
                 </li>
                 

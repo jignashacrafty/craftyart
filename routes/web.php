@@ -155,12 +155,13 @@ Route::post('sendVideoCategoryNotification/{id}', 'App\Http\Controllers\Api\Noti
 
 Route::get('show_v_item', [VideoTemplateController::class, 'show'])->name('show_v_item');
 Route::post('delete_v_item/{id}', [VideoTemplateController::class, 'destroy'])->name('v_item.delete');
-Route::post('create_v_item', [VideoTemplateController::class, 'create'])->name('create_v_item');
+Route::get('create_v_item', [VideoTemplateController::class, 'create'])->name('create_v_item');
 Route::post('submit_v_item', [VideoTemplateController::class, 'store']);
 Route::get('edit_v_item/{id}', [VideoTemplateController::class, 'edit'])->name('edit_v_item');
 Route::post('update_v_item/{id}', [VideoTemplateController::class, 'update'])->name('v_item.update');
 Route::get('edit_seo_v_item/{id}', [VideoTemplateController::class, 'editSeo'])->name('edit_seo_v_item');
 Route::post('update_seo_v_item/{id}', [VideoTemplateController::class, 'updateSeo'])->name('v_item_seo.update');
+Route::post('v_item_noindex/{id}', [VideoTemplateController::class, 'noindex_update'])->name('v_item.noindex');
 
 Route::get('show_cat', [CategoryController::class, 'show'])->name('show_cat');
 Route::get('delete_cat/{id}', [CategoryController::class, 'destroy']);
@@ -694,6 +695,7 @@ Route::get('/order-user/purchase-history/{userId}', [OrderUserController::class,
 Route::get('/order-user/get-plans', [OrderUserController::class, 'getPlans'])->name('order_user.get_plans');
 Route::post('/order-user/validate-email', [OrderUserController::class, 'validateEmail'])->name('order_user.validate_email');
 Route::post('/order-user/create-payment-link', [OrderUserController::class, 'createPaymentLink'])->name('order_user.create_payment_link');
+Route::post('/order-user/add-transaction-manually', [OrderUserController::class, 'addTransactionManually'])->name('order_user.add_transaction_manually');
 
 // Payment status check APIs (for testing/admin)
 Route::get('/order-user/check-phonepe-status/{merchantOrderId}', [OrderUserController::class, 'checkPhonePeStatusApi'])->name('order_user.check_phonepe_status');
@@ -856,4 +858,75 @@ Route::get('/order-updates-stream', function() {
         'Access-Control-Allow-Origin' => '*',
         'Access-Control-Allow-Headers' => 'Cache-Control',
     ]);
+});
+
+
+// Designer System Routes
+use App\Http\Controllers\Admin\DesignerSystemController;
+use App\Http\Controllers\Admin\WalletSettingController;
+use App\Http\Controllers\Admin\DesignerSystemSettingsController;
+
+Route::middleware(['auth'])->prefix('designer-system')->name('designer_system.')->group(function () {
+    // Designer Applications
+    Route::get('/applications', [DesignerSystemController::class, 'applications'])->name('applications');
+    Route::post('/application/{id}/approve', [DesignerSystemController::class, 'approveApplication'])->name('application.approve');
+    Route::post('/application/{id}/reject', [DesignerSystemController::class, 'rejectApplication'])->name('application.reject');
+    
+    // Designers List
+    Route::get('/designers', [DesignerSystemController::class, 'designers'])->name('designers');
+    
+    // Design Submissions (Designer Head)
+    Route::get('/design-submissions', [DesignerSystemController::class, 'designSubmissions'])->name('design_submissions');
+    Route::post('/design/{id}/approve', [DesignerSystemController::class, 'approveDesign'])->name('design.approve');
+    Route::post('/design/{id}/reject', [DesignerSystemController::class, 'rejectDesign'])->name('design.reject');
+    
+    // SEO Submissions (SEO Head)
+    Route::get('/seo-submissions', [DesignerSystemController::class, 'seoSubmissions'])->name('seo_submissions');
+    Route::post('/design/{id}/publish', [DesignerSystemController::class, 'publishDesign'])->name('design.publish');
+    
+    // Withdrawals (Admin)
+    Route::get('/withdrawals', [DesignerSystemController::class, 'withdrawals'])->name('withdrawals');
+    Route::post('/withdrawal/{id}/process', [DesignerSystemController::class, 'processWithdrawal'])->name('withdrawal.process');
+    Route::post('/withdrawal/{id}/reject', [DesignerSystemController::class, 'rejectWithdrawal'])->name('withdrawal.reject');
+    
+    // Wallet Settings
+    Route::get('/wallet-settings', [WalletSettingController::class, 'index'])->name('wallet_settings');
+    Route::get('/wallet-settings/create', [WalletSettingController::class, 'create'])->name('wallet_settings.create');
+    Route::post('/wallet-settings', [WalletSettingController::class, 'store'])->name('wallet_settings.store');
+    Route::get('/wallet-settings/{id}/edit', [WalletSettingController::class, 'edit'])->name('wallet_settings.edit');
+    Route::put('/wallet-settings/{id}', [WalletSettingController::class, 'update'])->name('wallet_settings.update');
+    Route::delete('/wallet-settings/{id}', [WalletSettingController::class, 'destroy'])->name('wallet_settings.destroy');
+    Route::post('/wallet-settings/{id}/toggle', [WalletSettingController::class, 'toggleActive'])->name('wallet_settings.toggle');
+    
+    // Designer Types
+    Route::get('/types', [DesignerSystemSettingsController::class, 'typesIndex'])->name('types');
+    Route::post('/types', [DesignerSystemSettingsController::class, 'storeType'])->name('types.store');
+    Route::put('/types/{id}', [DesignerSystemSettingsController::class, 'updateType'])->name('types.update');
+    Route::delete('/types/{id}', [DesignerSystemSettingsController::class, 'deleteType'])->name('types.delete');
+    Route::post('/types/{id}/toggle', [DesignerSystemSettingsController::class, 'toggleTypeActive'])->name('types.toggle');
+    
+    // Designer Categories
+    Route::get('/categories', [DesignerSystemSettingsController::class, 'categoriesIndex'])->name('categories');
+    Route::post('/categories', [DesignerSystemSettingsController::class, 'storeCategory'])->name('categories.store');
+    Route::put('/categories/{id}', [DesignerSystemSettingsController::class, 'updateCategory'])->name('categories.update');
+    Route::delete('/categories/{id}', [DesignerSystemSettingsController::class, 'deleteCategory'])->name('categories.delete');
+    Route::post('/categories/{id}/toggle', [DesignerSystemSettingsController::class, 'toggleCategoryActive'])->name('categories.toggle');
+    
+    // Designer Goals
+    Route::get('/goals', [DesignerSystemSettingsController::class, 'goalsIndex'])->name('goals');
+    Route::post('/goals', [DesignerSystemSettingsController::class, 'storeGoal'])->name('goals.store');
+    Route::put('/goals/{id}', [DesignerSystemSettingsController::class, 'updateGoal'])->name('goals.update');
+    Route::delete('/goals/{id}', [DesignerSystemSettingsController::class, 'deleteGoal'])->name('goals.delete');
+    Route::post('/goals/{id}/toggle', [DesignerSystemSettingsController::class, 'toggleGoalActive'])->name('goals.toggle');
+});
+
+
+
+// Payment success and failed pages
+Route::get('/payment-success', function() {
+    return view('payment.success');
+});
+
+Route::get('/payment-failed', function() {
+    return view('payment.failed');
 });

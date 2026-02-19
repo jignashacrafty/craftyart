@@ -30,6 +30,7 @@
             <form method="post" id="dynamic_form" enctype="multipart/form-data">
                 <span id="result"></span>
                 @csrf
+                <input type="hidden" name="id" value="{{ $dataArray['item']->id }}" />
                 <div id="page_number_container" style="display: none;">
                     <input class="form-control" type="textname" id="default_thumb_pos" name="default_thumb_pos"
                         value="{{ $dataArray['item']->default_thumb_pos }}" />
@@ -66,11 +67,112 @@
 
                 <br />
 
-                <h6>Additional Thumbnail</h6>
-                <input type="file" class="form-control-file form-control" name="additional_thumb"><br>
-                <img src="{{ config('filesystems.storage_url') }}{{ $dataArray['item']['additional_thumb'] }}"
-                    style="max-width: 100px; max-height: 100px; width: auto; height: auto" />
-                <br>
+                <div class="row">
+                    <div class="col-md-6 col-sm-12">
+                        <div class="form-group">
+                            <h6>Post Thumb</h6>
+                            <input 
+                                type="file" 
+                                class="form-control-file form-control post-thumb-input" 
+                                name="post_thumb" 
+                                id="post_thumb"
+                                accept="image/*"
+                                onchange="previewPostThumb(event)"
+                                style="background-color: white !important; cursor: pointer !important; pointer-events: auto !important;">
+                            <br>
+                            @if(!empty($dataArray['item']->post_thumb))
+                                <img 
+                                    id="postThumbPreview"
+                                    src="{{ config('filesystems.storage_url') }}{{ $dataArray['item']->post_thumb }}?v={{ time() }}"
+                                    style="max-width: 100px; max-height: 100px; border: 1px solid #ddd; padding: 2px; border-radius: 4px;"
+                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div style="display: none; padding: 5px; background: #f8d7da; border-radius: 4px; color: #721c24; font-size: 11px;">
+                                    <i class="fa fa-exclamation-triangle"></i> Image not found
+                                </div>
+                                <p style="font-size: 11px; color: #6c757d; margin-top: 5px;">
+                                    Current: {{ basename($dataArray['item']->post_thumb) }}
+                                </p>
+                                <br>
+                                <button 
+                                    type="button" 
+                                    id="removePostThumbBtn"
+                                    class="btn btn-danger btn-sm"
+                                    onclick="removePostThumb()">
+                                    Remove Post Thumb
+                                </button>
+                            @else
+                                <img 
+                                    id="postThumbPreview"
+                                    style="max-width: 100px; max-height: 100px; border: 1px solid #ddd; padding: 2px; border-radius: 4px; display: none;">
+                                <div id="noPostThumbMsg" style="padding: 5px; background: #f8d7da; border-radius: 4px; color: #721c24; font-size: 11px;">
+                                    <i class="fa fa-exclamation-triangle"></i> Image not found
+                                </div>
+                                <br>
+                                <button 
+                                    type="button" 
+                                    id="removePostThumbBtn"
+                                    class="btn btn-danger btn-sm"
+                                    style="display: none;"
+                                    onclick="removePostThumb()">
+                                    Remove Post Thumb
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-sm-12">
+                        <div class="form-group">
+                            <h6>Additional Thumbnail</h6>
+                            <input 
+                                type="file" 
+                                class="form-control-file form-control additional-thumb-input" 
+                                name="additional_thumb" 
+                                id="additional_thumb"
+                                accept="image/*"
+                                onchange="previewAdditionalThumb(event)"
+                                style="background-color: white !important; cursor: pointer !important; pointer-events: auto !important;">
+                            <br>
+                            @if(!empty($dataArray['item']->additional_thumb))
+                                <img 
+                                    id="additionalThumbPreview"
+                                    src="{{ config('filesystems.storage_url') }}{{ $dataArray['item']->additional_thumb }}?v={{ time() }}"
+                                    style="max-width: 100px; max-height: 100px; border: 1px solid #ddd; padding: 2px; border-radius: 4px;"
+                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div style="display: none; padding: 5px; background: #f8d7da; border-radius: 4px; color: #721c24; font-size: 11px;">
+                                    <i class="fa fa-exclamation-triangle"></i> Image not found
+                                </div>
+                                <p style="font-size: 11px; color: #6c757d; margin-top: 5px;">
+                                    Current: {{ basename($dataArray['item']->additional_thumb) }}
+                                </p>
+                                <br>
+                                <button 
+                                    type="button" 
+                                    id="removeAdditionalThumbBtn"
+                                    class="btn btn-danger btn-sm"
+                                    onclick="removeAdditionalThumb()">
+                                    Remove Additional Thumb
+                                </button>
+                            @else
+                                <img 
+                                    id="additionalThumbPreview"
+                                    style="max-width: 100px; max-height: 100px; border: 1px solid #ddd; padding: 2px; border-radius: 4px; display: none;">
+                                <div id="noAdditionalThumbMsg" style="padding: 5px; background: #f8d7da; border-radius: 4px; color: #721c24; font-size: 11px;">
+                                    <i class="fa fa-exclamation-triangle"></i> Image not found
+                                </div>
+                                <br>
+                                <button 
+                                    type="button" 
+                                    id="removeAdditionalThumbBtn"
+                                    class="btn btn-danger btn-sm"
+                                    style="display: none;"
+                                    onclick="removeAdditionalThumb()">
+                                    Remove Additional Thumb
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
                 <br>
                 <h6>SEO Row</h6>
                 <hr>
@@ -656,6 +758,125 @@
         $('#default_btn_' + id).html('Defaulted Thumb');
     }
 
+    // Post Thumb preview and remove functions
+    function previewPostThumb(event) {
+        const input = event.target;
+        const preview = document.getElementById('postThumbPreview');
+        const removeBtn = document.getElementById('removePostThumbBtn');
+        const noMsg = document.getElementById('noPostThumbMsg');
+
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please select a valid image file (JPG, PNG, GIF, or WEBP)');
+                input.value = '';
+                return;
+            }
+            
+            // Validate file size (max 2MB)
+            if (file.size > 2048 * 1024) {
+                alert('Image size must be less than 2MB');
+                input.value = '';
+                return;
+            }
+            
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = 'block';
+            removeBtn.style.display = 'inline-block';
+            if (noMsg) noMsg.style.display = 'none';
+        }
+    }
+
+    function removePostThumb() {
+        if (!confirm('Are you sure you want to remove the Post Thumb image?')) {
+            return;
+        }
+
+        const designId = document.querySelector('input[name="id"]').value;
+        
+        // Send AJAX request to remove from database
+        $.ajax({
+            url: '/remove-post-thumb/' + designId,
+            type: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Clear the input and preview
+                    const input = document.getElementById('post_thumb');
+                    const preview = document.getElementById('postThumbPreview');
+                    const removeBtn = document.getElementById('removePostThumbBtn');
+                    const noMsg = document.getElementById('noPostThumbMsg');
+                    const currentFileText = preview.nextElementSibling?.nextElementSibling;
+
+                    input.value = null;
+                    preview.src = '';
+                    preview.style.display = 'none';
+                    removeBtn.style.display = 'none';
+                    if (noMsg) noMsg.style.display = 'block';
+                    if (currentFileText) currentFileText.style.display = 'none';
+
+                    alert('Post Thumb removed successfully!');
+                } else {
+                    alert('Error: ' + (response.error || 'Failed to remove image'));
+                }
+            },
+            error: function(xhr) {
+                console.error('Remove error:', xhr);
+                alert('Failed to remove Post Thumb. Please try again.');
+            }
+        });
+    }
+
+    // Additional Thumb preview and remove functions
+    function previewAdditionalThumb(event) {
+        const input = event.target;
+        const preview = document.getElementById('additionalThumbPreview');
+        const removeBtn = document.getElementById('removeAdditionalThumbBtn');
+        const noMsg = document.getElementById('noAdditionalThumbMsg');
+
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please select a valid image file (JPG, PNG, GIF, or WEBP)');
+                input.value = '';
+                return;
+            }
+            
+            // Validate file size (max 2MB)
+            if (file.size > 2048 * 1024) {
+                alert('Image size must be less than 2MB');
+                input.value = '';
+                return;
+            }
+            
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = 'block';
+            removeBtn.style.display = 'inline-block';
+            if (noMsg) noMsg.style.display = 'none';
+        }
+    }
+
+    function removeAdditionalThumb() {
+        const input = document.getElementById('additional_thumb');
+        const preview = document.getElementById('additionalThumbPreview');
+        const removeBtn = document.getElementById('removeAdditionalThumbBtn');
+        const noMsg = document.getElementById('noAdditionalThumbMsg');
+
+        input.value = null;
+        preview.src = '';
+        preview.style.display = 'none';
+        removeBtn.style.display = 'none';
+        if (noMsg) noMsg.style.display = 'block';
+    }
+
     window.addEventListener("load", function() {
         var main_loading_screen = document.getElementById("main_loading_screen");
         main_loading_screen.style.display = "none";
@@ -857,11 +1078,32 @@
         });
 
         var formData = new FormData(this);
+        
+        // Debug: Log file inputs
+        var postThumbFile = document.getElementById('post_thumb').files[0];
+        var additionalThumbFile = document.getElementById('additional_thumb').files[0];
+        
+        console.log('Post Thumb file:', postThumbFile ? postThumbFile.name : 'No file selected');
+        console.log('Additional Thumb file:', additionalThumbFile ? additionalThumbFile.name : 'No file selected');
+        
+        // Ensure files are in FormData
+        if (postThumbFile) {
+            formData.set('post_thumb', postThumbFile);
+            console.log('Post Thumb added to FormData');
+        }
+        if (additionalThumbFile) {
+            formData.set('additional_thumb', additionalThumbFile);
+            console.log('Additional Thumb added to FormData');
+        }
+        
         var url = "{{ route('item.update_seo', [$dataArray['item']->id]) }}";
         $.ajax({
             url: url,
             type: 'POST',
             data: formData,
+            processData: false,  // Don't process the files
+            contentType: false,  // Set content type to false as jQuery will tell the server its a query string request
+            cache: false,
             beforeSend: function() {
                 var main_loading_screen = document.getElementById("main_loading_screen");
                 main_loading_screen.style.display = "block";
@@ -873,12 +1115,18 @@
 
                 hideFields();
                 if (data.error) {
-                    window.alert(data.error);
+                    console.error('Update error:', data.error);
+                    window.alert('Error: ' + data.error);
                     $('#result').html('<div class="alert alert-danger">' + data.error + '</div>');
-                    // $('#description').val(data.error);
                 } else {
-                    window.alert(data.success);
-                    // window.location.href = "{{ route('show_item') }}";
+                    console.log('Update success:', data.success);
+                    window.alert('Success: ' + data.success + '\n\nPage will reload to show updated images.');
+                    $('#result').html('<div class="alert alert-success">' + data.success + '</div>');
+                    
+                    // Reload page after 1.5 seconds to show updated images
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1500);
                 }
 
                 setTimeout(function() {
@@ -891,7 +1139,20 @@
                     select.disabled = true;
                 });
                 hideFields();
-                window.alert(error.responseText);
+                
+                console.error('AJAX error:', error);
+                var errorMsg = 'An error occurred while updating.';
+                
+                if (error.responseJSON && error.responseJSON.message) {
+                    errorMsg = error.responseJSON.message;
+                } else if (error.responseJSON && error.responseJSON.error) {
+                    errorMsg = error.responseJSON.error;
+                } else if (error.responseText) {
+                    errorMsg = error.responseText;
+                }
+                
+                window.alert('Error: ' + errorMsg);
+                $('#result').html('<div class="alert alert-danger">' + errorMsg + '</div>');
             },
             cache: false,
             contentType: false,
@@ -942,6 +1203,21 @@
         if ($("input[name='new_category_id']").val() != "" && $("input[name='new_category_id']").val() != "0") {
             loadNewSearchKeywords($("input[name='new_category_id']").val())
         }
+
+        // Ensure Post Thumb and Additional Thumb fields are enabled
+        $('#post_thumb').prop('disabled', false).css({
+            'background-color': 'white',
+            'cursor': 'pointer',
+            'pointer-events': 'auto'
+        });
+        
+        $('#additional_thumb').prop('disabled', false).css({
+            'background-color': 'white',
+            'cursor': 'pointer',
+            'pointer-events': 'auto'
+        });
+
+        console.log('Post Thumb and Additional Thumb fields enabled');
     });
 
     const loadNewSearchKeywords = (newCatId) => {

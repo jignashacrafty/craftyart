@@ -1,0 +1,1155 @@
+{
+  "info": {
+    "name": "Designer System APIs",
+    "_postman_id": "designer-system-apis",
+    "description": "Complete API collection for Designer Onboarding & Portfolio Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost/git_jignasha/craftyart/public/api",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "application_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "design_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Enrollment Metadata APIs (Public)",
+      "description": "APIs to fetch designer types, categories, and goals for enrollment form",
+      "item": [
+        {
+          "name": "Get All Enrollment Options (Combined)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/designer/enrollment/options",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer",
+                "enrollment",
+                "options"
+              ]
+            },
+            "description": "Get all enrollment metadata (types, categories, goals) in one API call"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/designer/enrollment/options",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "designer",
+                    "enrollment",
+                    "options"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Data Fetched\",\n  \"types\": [\n    {\n      \"id\": 1,\n      \"name\": \"Social Media\",\n      \"slug\": \"social-media\",\n      \"description\": \"Social media content creators\",\n      \"icon\": null,\n      \"is_active\": true,\n      \"sort_order\": 1\n    },\n    {\n      \"id\": 2,\n      \"name\": \"Print\",\n      \"slug\": \"print\",\n      \"description\": \"Print design specialists\",\n      \"icon\": null,\n      \"is_active\": true,\n      \"sort_order\": 2\n    }\n  ],\n  \"categories\": [\n    {\n      \"id\": 1,\n      \"name\": \"Design Trends\",\n      \"slug\": \"design-trends\",\n      \"description\": \"Latest design trends and styles\",\n      \"icon\": null,\n      \"is_active\": true,\n      \"sort_order\": 1\n    },\n    {\n      \"id\": 2,\n      \"name\": \"UI/UX Design\",\n      \"slug\": \"ui-ux-design\",\n      \"description\": \"User interface and experience design\",\n      \"icon\": null,\n      \"is_active\": true,\n      \"sort_order\": 2\n    }\n  ],\n  \"goals\": [\n    {\n      \"id\": 1,\n      \"name\": \"Earnings\",\n      \"slug\": \"earnings\",\n      \"description\": \"Generate income from designs\",\n      \"icon\": null,\n      \"is_active\": true,\n      \"sort_order\": 1\n    },\n    {\n      \"id\": 2,\n      \"name\": \"Marketing\",\n      \"slug\": \"marketing\",\n      \"description\": \"Market and promote work\",\n      \"icon\": null,\n      \"is_active\": true,\n      \"sort_order\": 2\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Designer Types",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/designer/enrollment/types",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer",
+                "enrollment",
+                "types"
+              ]
+            },
+            "description": "Get all active designer types (what designers create: Social Media, Print, Video, etc.)"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/designer/enrollment/types",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "designer",
+                    "enrollment",
+                    "types"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Data Fetched\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"name\": \"Social Media Graphics\",\n      \"slug\": \"social-media\",\n      \"description\": \"Instagram posts, Facebook covers, Twitter headers\",\n      \"icon\": \"fa-share-alt\",\n      \"is_active\": true,\n      \"sort_order\": 1\n    },\n    {\n      \"id\": 2,\n      \"name\": \"Print Design\",\n      \"slug\": \"print-design\",\n      \"description\": \"Business cards, flyers, brochures, posters\",\n      \"icon\": \"fa-print\",\n      \"is_active\": true,\n      \"sort_order\": 2\n    },\n    {\n      \"id\": 3,\n      \"name\": \"Video Templates\",\n      \"slug\": \"video-templates\",\n      \"description\": \"Intro videos, promotional videos, animations\",\n      \"icon\": \"fa-video\",\n      \"is_active\": true,\n      \"sort_order\": 3\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Designer Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/designer/enrollment/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer",
+                "enrollment",
+                "categories"
+              ]
+            },
+            "description": "Get all active designer categories (interests/specializations)"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/designer/enrollment/categories",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "designer",
+                    "enrollment",
+                    "categories"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Data Fetched\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"name\": \"Wedding & Events\",\n      \"slug\": \"wedding-events\",\n      \"description\": \"Wedding invitations, event posters, celebration designs\",\n      \"icon\": \"fa-heart\",\n      \"is_active\": true,\n      \"sort_order\": 1\n    },\n    {\n      \"id\": 2,\n      \"name\": \"Business & Marketing\",\n      \"slug\": \"business-marketing\",\n      \"description\": \"Business cards, marketing materials, corporate designs\",\n      \"icon\": \"fa-briefcase\",\n      \"is_active\": true,\n      \"sort_order\": 2\n    },\n    {\n      \"id\": 3,\n      \"name\": \"Festival & Celebration\",\n      \"slug\": \"festival-celebration\",\n      \"description\": \"Diwali, Holi, Christmas, New Year designs\",\n      \"icon\": \"fa-gift\",\n      \"is_active\": true,\n      \"sort_order\": 3\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Designer Goals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/designer/enrollment/goals",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer",
+                "enrollment",
+                "goals"
+              ]
+            },
+            "description": "Get all active designer goals (motivations for joining)"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/designer/enrollment/goals",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "designer",
+                    "enrollment",
+                    "goals"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Data Fetched\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"name\": \"Earn Money\",\n      \"slug\": \"earn-money\",\n      \"description\": \"Generate income from design skills\",\n      \"icon\": \"fa-dollar-sign\",\n      \"is_active\": true,\n      \"sort_order\": 1\n    },\n    {\n      \"id\": 2,\n      \"name\": \"Build Portfolio\",\n      \"slug\": \"build-portfolio\",\n      \"description\": \"Showcase work and build professional portfolio\",\n      \"icon\": \"fa-folder\",\n      \"is_active\": true,\n      \"sort_order\": 2\n    },\n    {\n      \"id\": 3,\n      \"name\": \"Learn & Grow\",\n      \"slug\": \"learn-grow\",\n      \"description\": \"Improve skills and learn from feedback\",\n      \"icon\": \"fa-graduation-cap\",\n      \"is_active\": true,\n      \"sort_order\": 3\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Public APIs (No Auth)",
+      "item": [
+        {
+          "name": "Submit Designer Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Designer\",\n  \"email\": \"designer@test.com\",\n  \"phone\": \"9876543210\",\n  \"address\": \"123 Test Street\",\n  \"city\": \"Ahmedabad\",\n  \"state\": \"Gujarat\",\n  \"country\": \"India\",\n  \"experience\": \"3 years of graphic design experience\",\n  \"experience_level\": \"mid-level\",\n  \"skills\": \"Photoshop, Illustrator, Figma\",\n  \"portfolio_links\": [\n    \"https://behance.net/testdesigner\",\n    \"https://dribbble.com/testdesigner\"\n  ],\n  \"selected_types\": [1, 2, 7],\n  \"selected_categories\": [1, 2, 5],\n  \"selected_goals\": [1, 4, 8]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/designer/apply",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer",
+                "apply"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Test Designer\",\n  \"email\": \"designer@test.com\",\n  \"phone\": \"9876543210\",\n  \"address\": \"123 Test Street\",\n  \"city\": \"Ahmedabad\",\n  \"state\": \"Gujarat\",\n  \"country\": \"India\",\n  \"experience\": \"3 years of graphic design experience\",\n  \"experience_level\": \"mid-level\",\n  \"skills\": \"Photoshop, Illustrator, Figma\",\n  \"portfolio_links\": [\n    \"https://behance.net/testdesigner\",\n    \"https://dribbble.com/testdesigner\"\n  ],\n  \"selected_types\": [1, 2, 7],\n  \"selected_categories\": [1, 2, 5],\n  \"selected_goals\": [1, 4, 8]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/designer/apply",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "designer",
+                    "apply"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 201,\n  \"success\": true,\n  \"msg\": \"Application submitted successfully! We will review and get back to you soon.\",\n  \"application_id\": 62,\n  \"status\": \"pending\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Check Application Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"designer@test.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/designer/check-status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer",
+                "check-status"
+              ]
+            },
+            "description": "Check application status with enrollment fields"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"designer@test.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/designer/check-status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "designer",
+                    "check-status"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Application found\",\n  \"application_id\": 54,\n  \"name\": \"Test Designer\",\n  \"email\": \"designer@test.com\",\n  \"phone\": \"9876543210\",\n  \"city\": \"Ahmedabad\",\n  \"state\": \"Gujarat\",\n  \"country\": \"India\",\n  \"experience\": \"3 years of graphic design experience\",\n  \"experience_level\": \"mid-level\",\n  \"skills\": \"Photoshop, Illustrator, Figma\",\n  \"portfolio_links\": [\n    \"https://behance.net/testdesigner\",\n    \"https://dribbble.com/testdesigner\"\n  ],\n  \"selected_types\": [1, 2, 7],\n  \"selected_categories\": [1, 2, 5],\n  \"selected_goals\": [1, 4, 8],\n  \"status\": \"pending\",\n  \"submitted_at\": \"2026-02-14T12:07:47.000000Z\",\n  \"reviewed_at\": null,\n  \"rejection_reason\": null\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Designer Head APIs",
+      "item": [
+        {
+          "name": "Get All Applications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/designer-head/applications?status=pending&per_page=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer-head",
+                "applications"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get all designer applications with enrollment metadata (types, categories, goals)"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/designer-head/applications?status=pending&per_page=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "designer-head",
+                    "applications"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "pending"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": 1,\n      \"name\": \"John Designer\",\n      \"email\": \"john@example.com\",\n      \"phone\": \"9876543210\",\n      \"city\": \"Ahmedabad\",\n      \"state\": \"Gujarat\",\n      \"experience\": \"3 years of graphic design experience\",\n      \"experience_level\": \"mid-level\",\n      \"skills\": \"Photoshop, Illustrator, Figma\",\n      \"portfolio_links\": [\n        \"https://behance.net/johndesigner\",\n        \"https://dribbble.com/johndesigner\"\n      ],\n      \"uploaded_samples\": [],\n      \"selected_types\": [1, 2, 7],\n      \"selected_categories\": [1, 2, 5],\n      \"selected_goals\": [1, 4, 8],\n      \"status\": \"pending\",\n      \"submitted_at\": \"2026-02-14T10:30:00.000000Z\",\n      \"reviewed_by\": null,\n      \"reviewed_at\": null,\n      \"rejection_reason\": null\n    }\n  ],\n  \"pagination\": {\n    \"current_page\": 1,\n    \"total_pages\": 1,\n    \"total\": 1,\n    \"per_page\": 20\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Approve Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"commission_rate\": 30\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/designer-head/application/{{application_id}}/approve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer-head",
+                "application",
+                "{{application_id}}",
+                "approve"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rejection_reason\": \"Portfolio does not meet our quality standards\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/designer-head/application/{{application_id}}/reject",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer-head",
+                "application",
+                "{{application_id}}",
+                "reject"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Design Submissions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/designer-head/design-submissions?status=pending_designer_head",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer-head",
+                "design-submissions"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending_designer_head"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Design",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Great design! Approved for SEO review.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/designer-head/design/{{design_id}}/approve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer-head",
+                "design",
+                "{{design_id}}",
+                "approve"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject Design",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Design quality needs improvement. Please revise and resubmit.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/designer-head/design/{{design_id}}/reject",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer-head",
+                "design",
+                "{{design_id}}",
+                "reject"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Designer APIs",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/designer/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer",
+                "profile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Design",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "Wedding Invitation Card",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Beautiful wedding invitation design with floral elements",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "template",
+                  "type": "text"
+                },
+                {
+                  "key": "design_file",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "preview_images[]",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "tags[]",
+                  "value": "wedding",
+                  "type": "text"
+                },
+                {
+                  "key": "tags[]",
+                  "value": "invitation",
+                  "type": "text"
+                },
+                {
+                  "key": "meta_title",
+                  "value": "Wedding Invitation Card Design",
+                  "type": "text"
+                },
+                {
+                  "key": "meta_description",
+                  "value": "Beautiful wedding invitation card design with floral elements",
+                  "type": "text"
+                },
+                {
+                  "key": "keywords[]",
+                  "value": "wedding",
+                  "type": "text"
+                },
+                {
+                  "key": "keywords[]",
+                  "value": "invitation",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/designer/design/submit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer",
+                "design",
+                "submit"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Designs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/designer/designs?status=pending_designer_head&per_page=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer",
+                "designs"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending_designer_head"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Design Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/designer/design/{{design_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer",
+                "design",
+                "{{design_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Wallet",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/designer/wallet",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer",
+                "wallet"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Transactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/designer/transactions?type=credit&per_page=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "credit"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Request Withdrawal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1000,\n  \"payment_method\": \"upi\",\n  \"upi_id\": \"designer@paytm\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/designer/withdrawal/request",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer",
+                "withdrawal",
+                "request"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Withdrawals",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/designer/withdrawals?status=pending",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "designer",
+                "withdrawals"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. SEO Head APIs",
+      "item": [
+        {
+          "name": "Get Design Submissions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/seo-head/design-submissions?status=pending_seo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "seo-head",
+                "design-submissions"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending_seo"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Design (Publish)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "meta_title",
+                  "value": "Wedding Invitation Card - Free Template",
+                  "type": "text"
+                },
+                {
+                  "key": "meta_description",
+                  "value": "Download beautiful wedding invitation card template for free. Customize and create stunning invitations.",
+                  "type": "text"
+                },
+                {
+                  "key": "slug",
+                  "value": "wedding-invitation-card-template",
+                  "type": "text"
+                },
+                {
+                  "key": "keywords[]",
+                  "value": "wedding invitation",
+                  "type": "text"
+                },
+                {
+                  "key": "keywords[]",
+                  "value": "invitation card",
+                  "type": "text"
+                },
+                {
+                  "key": "is_featured",
+                  "value": "true",
+                  "type": "text"
+                },
+                {
+                  "key": "is_trending",
+                  "value": "false",
+                  "type": "text"
+                },
+                {
+                  "key": "priority",
+                  "value": "10",
+                  "type": "text"
+                },
+                {
+                  "key": "notes",
+                  "value": "SEO optimized and ready to publish",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/seo-head/design/{{design_id}}/approve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "seo-head",
+                "design",
+                "{{design_id}}",
+                "approve"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject Design",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"SEO details need improvement. Please provide better keywords and description.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/seo-head/design/{{design_id}}/reject",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "seo-head",
+                "design",
+                "{{design_id}}",
+                "reject"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update SEO Details",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meta_title\": \"Updated Title\",\n  \"meta_description\": \"Updated description\",\n  \"keywords\": [\"keyword1\", \"keyword2\"],\n  \"is_featured\": true,\n  \"is_trending\": false,\n  \"priority\": 15\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/seo-head/design/{{design_id}}/update-seo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "seo-head",
+                "design",
+                "{{design_id}}",
+                "update-seo"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Admin APIs",
+      "item": [
+        {
+          "name": "Get Withdrawal Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/designer/withdrawals?status=pending",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "designer",
+                "withdrawals"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Process Withdrawal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_reference\": \"TXN123456789\",\n  \"admin_notes\": \"Payment processed successfully via UPI\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/designer/withdrawal/1/process",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "designer",
+                "withdrawal",
+                "1",
+                "process"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject Withdrawal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rejection_reason\": \"Invalid bank details provided\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/designer/withdrawal/1/reject",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "designer",
+                "withdrawal",
+                "1",
+                "reject"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

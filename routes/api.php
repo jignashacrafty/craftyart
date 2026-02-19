@@ -286,6 +286,11 @@ Route::any('payment/createAutopayMandate', [PhonePePaymentApiController2::class,
 Route::get('phonepe/order-status/{merchantOrderId}', [PhonePePaymentApiController2::class, 'checkOrderStatus']);
 Route::get('phonepe/refund', [PhonePePaymentApiController2::class, 'refundPhonePePayment']);
 
+// PhonePe AutoPay API Routes (No CSRF token required)
+Route::any('phonepe/autopay/setup', [App\Http\Controllers\Api\PhonePeAutoPayController::class, 'setupSubscription']);
+Route::get('phonepe/autopay/status/{merchantSubscriptionId}', [App\Http\Controllers\Api\PhonePeAutoPayController::class, 'getSubscriptionStatus']);
+Route::post('phonepe/autopay/redeem', [App\Http\Controllers\Api\PhonePeAutoPayController::class, 'triggerManualRedemption']);
+Route::post('phonepe/autopay/cancel', [App\Http\Controllers\Api\PhonePeAutoPayController::class, 'cancelSubscription']);
 
 // JSON file handling APIs
 Route::post('/json/save', [CaricatureController::class, 'saveJson']);
@@ -294,7 +299,37 @@ Route::post('/json/delete-multiple', [CaricatureController::class, 'deleteMultip
 
 Route::any('getOfferPopUp', [PlanController::class, 'getOfferPopUp']);
 
+// Order User Management APIs
+// Order User Authentication (Simple JSON responses, no encryption)
+Route::prefix('order-user-auth')->middleware('api')->group(function () {
+    Route::post('/login', [App\Http\Controllers\Api\OrderUserAuthController::class, 'login']);
+    Route::post('/verify-token', [App\Http\Controllers\Api\OrderUserAuthController::class, 'verifyToken']);
+    Route::post('/logout', [App\Http\Controllers\Api\OrderUserAuthController::class, 'logout']);
+});
 
+// Order User Management APIs
+Route::prefix('order-user')->middleware('api')->group(function () {
+    // No auth required routes
+    Route::get('/followup-labels', [App\Http\Controllers\Api\OrderUserApiController::class, 'getFollowupLabels']);
+    Route::get('/get-plans', [App\Http\Controllers\Api\OrderUserApiController::class, 'getPlans']);
+    Route::post('/validate-email', [App\Http\Controllers\Api\OrderUserApiController::class, 'validateEmail']);
+    
+    // Optional auth routes (work without auth but better with auth)
+    Route::get('/', [App\Http\Controllers\Api\OrderUserApiController::class, 'index']);
+    Route::get('/get-user-usage', [App\Http\Controllers\Api\OrderUserApiController::class, 'getUserUsage']);
+    Route::get('/purchase-history/{userId}', [App\Http\Controllers\Api\OrderUserApiController::class, 'getPurchaseHistory']);
+    Route::get('/check-phonepe-status/{merchantOrderId}', [App\Http\Controllers\Api\OrderUserApiController::class, 'checkPhonePeStatus']);
+    Route::get('/check-razorpay-status/{paymentLinkId}', [App\Http\Controllers\Api\OrderUserApiController::class, 'checkRazorpayStatus']);
+    Route::get('/new-orders', [App\Http\Controllers\Api\OrderUserApiController::class, 'getNewOrders']);
+    
+    // Auth required routes (use encrypted token middleware)
+    Route::middleware(\App\Http\Middleware\ValidateEncryptedToken::class)->group(function () {
+        Route::post('/followup-update', [App\Http\Controllers\Api\OrderUserApiController::class, 'followupUpdate']);
+        Route::post('/create-payment-link', [App\Http\Controllers\Api\OrderUserApiController::class, 'createPaymentLink']);
+        Route::post('/create-order', [App\Http\Controllers\Api\OrderUserApiController::class, 'createOrder']);
+        Route::post('/add-transaction-manually', [App\Http\Controllers\Api\OrderUserApiController::class, 'addTransactionManually']);
+    });
+});
 
 Route::post('V4/getAll', 'App\Http\Controllers\Api\TemplateApiController@getAll');
 Route::post('V4/getCategoryPosters', 'App\Http\Controllers\Api\TemplateApiController@getCategoryPosters');
@@ -475,5 +510,85 @@ Route::post('/reviews/user_review', [ReviewController::class, 'getUserReview']);
 Route::post('/getFrames', [FrameApiController::class, 'getFrameData']);
 Route::post('/getCatFrames', [FrameApiController::class, 'getCatFrameData']);
 
-// routes/api.php
+// Designer System APIs
+use App\Http\Controllers\Api\DesignerApplicationController;
+use App\Http\Controllers\Api\DesignerController;
+use App\Http\Controllers\Api\DesignerWalletController;
+use App\Http\Controllers\Api\DesignerHeadController;
+use App\Http\Controllers\Api\SeoHeadController;
+use App\Http\Controllers\Api\AdminDesignerController;
+use App\Http\Controllers\Api\DesignerEnrollmentController;
 
+// Public APIs - No Auth Required
+Route::prefix('designer')->group(function () {
+    Route::post('/apply', [DesignerApplicationController::class, 'apply']);
+    Route::post('/check-status', [DesignerApplicationController::class, 'checkStatus']);
+    Route::post('/enrollment/options', [DesignerEnrollmentController::class, 'getEnrollmentOptions']);
+    
+    // Enrollment Metadata APIs (Public - No Auth)
+    Route::get('/enrollment/types', [DesignerEnrollmentController::class, 'getTypes']);
+    Route::get('/enrollment/categories', [DesignerEnrollmentController::class, 'getCategories']);
+    Route::get('/enrollment/goals', [DesignerEnrollmentController::class, 'getGoals']);
+});
+
+// Designer APIs - Auth Required
+Route::prefix('designer')->middleware('auth:api')->group(function () {
+    // Enrollment APIs
+    Route::get('/enrollment/check', [DesignerEnrollmentController::class, 'checkEnrollment']);
+    Route::post('/enrollment/submit', [DesignerEnrollmentController::class, 'submitEnrollment']);
+    Route::post('/enrollment/choose-plan', [DesignerEnrollmentController::class, 'choosePlan']);
+    Route::get('/enrollment/status', [DesignerEnrollmentController::class, 'getEnrollmentStatus']);
+    
+    // Profile & Design APIs
+    Route::get('/profile', [DesignerController::class, 'getProfile']);
+    Route::post('/design/submit', [DesignerController::class, 'submitDesign']);
+    Route::get('/designs', [DesignerController::class, 'getDesigns']);
+    Route::get('/design/{id}', [DesignerController::class, 'getDesignDetails']);
+    
+    // Wallet APIs
+    Route::get('/wallet', [DesignerWalletController::class, 'getWallet']);
+    Route::get('/transactions', [DesignerWalletController::class, 'getTransactions']);
+    Route::post('/withdrawal/request', [DesignerWalletController::class, 'requestWithdrawal']);
+    Route::get('/withdrawals', [DesignerWalletController::class, 'getWithdrawals']);
+});
+
+// Designer Head APIs - Auth Required
+Route::prefix('designer-head')->middleware('auth:api')->group(function () {
+    Route::get('/applications', [DesignerHeadController::class, 'getApplications']);
+    Route::post('/application/{id}/approve', [DesignerHeadController::class, 'approveApplication']);
+    Route::post('/application/{id}/reject', [DesignerHeadController::class, 'rejectApplication']);
+    Route::get('/design-submissions', [DesignerHeadController::class, 'getDesignSubmissions']);
+    Route::post('/design/{id}/approve', [DesignerHeadController::class, 'approveDesign']);
+    Route::post('/design/{id}/reject', [DesignerHeadController::class, 'rejectDesign']);
+});
+
+// SEO Head APIs - Auth Required
+Route::prefix('seo-head')->middleware('auth:api')->group(function () {
+    Route::get('/design-submissions', [SeoHeadController::class, 'getDesignSubmissions']);
+    Route::post('/design/{id}/approve', [SeoHeadController::class, 'approveDesign']);
+    Route::post('/design/{id}/reject', [SeoHeadController::class, 'rejectDesign']);
+    Route::post('/design/{id}/update-seo', [SeoHeadController::class, 'updateSeoDetails']);
+});
+
+// Admin Designer APIs - Auth Required
+Route::prefix('admin/designer')->middleware('auth:api')->group(function () {
+    Route::get('/withdrawals', [AdminDesignerController::class, 'getWithdrawals']);
+    Route::post('/withdrawal/{id}/process', [AdminDesignerController::class, 'processWithdrawal']);
+    Route::post('/withdrawal/{id}/reject', [AdminDesignerController::class, 'rejectWithdrawal']);
+});
+
+
+
+// Simple Payment API - Common payment link generation
+Route::prefix('payment')->group(function () {
+    // Create payment link (minimal data required)
+    Route::post('create-link', [App\Http\Controllers\Api\SimplePaymentController::class, 'createPaymentLink']);
+    
+    // Check payment status
+    Route::get('status', [App\Http\Controllers\Api\SimplePaymentController::class, 'checkPaymentStatus']);
+    Route::post('status', [App\Http\Controllers\Api\SimplePaymentController::class, 'checkPaymentStatus']);
+    
+    // Webhook handlers
+    Route::any('razorpay-webhook', [App\Http\Controllers\Api\SimplePaymentController::class, 'razorpayWebhook']);
+    Route::any('phonepe-webhook', [App\Http\Controllers\Api\SimplePaymentController::class, 'phonePeWebhook']);
+});

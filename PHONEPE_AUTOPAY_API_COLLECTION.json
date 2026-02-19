@@ -1,0 +1,205 @@
+{
+  "info": {
+    "_postman_id": "phonepe-autopay-api-proper-2026",
+    "name": "PhonePe AutoPay API - Proper Collection",
+    "description": "✅ Proper API collection using main PhonePeAutoPayController\n\n🔥 NO CSRF TOKEN REQUIRED - These are API routes!\n\n📍 All endpoints are under /api/ route\n\n🎯 Uses production OAuth credentials",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Setup AutoPay Subscription",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"user_id\": \"test_user_123\",\n    \"plan_id\": \"plan_monthly_99\",\n    \"amount\": 1,\n    \"upi\": \"vrajsurani606@okaxis\",\n    \"target_app\": \"com.phonepe.app\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/phonepe/autopay/setup",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "phonepe",
+            "autopay",
+            "setup"
+          ]
+        },
+        "description": "Creates a new AutoPay subscription setup request.\n\n**Request Body:**\n- `user_id` (required): User identifier\n- `plan_id` (required): Subscription plan ID\n- `amount` (required): Amount in rupees (minimum 1)\n- `upi` (optional): User's UPI ID\n- `target_app` (optional): Target UPI app\n\n**Response:**\n- `merchant_order_id`: Your order ID\n- `merchant_subscription_id`: Your subscription ID (SAVE THIS!)\n- `phonepe_order_id`: PhonePe's order ID\n- `redirect_url`: URL to redirect user for payment\n- `state`: Current state (PENDING)\n\n**What Happens:**\n1. Creates Order in database\n2. Generates OAuth token automatically\n3. Sends subscription setup request to PhonePe\n4. Returns redirect URL for user to complete payment\n5. User approves mandate on their phone\n\n**⚠️ NO CSRF TOKEN NEEDED - This is an API route!**"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Subscription Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/phonepe/autopay/status/{{merchant_subscription_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "phonepe",
+            "autopay",
+            "status",
+            "{{merchant_subscription_id}}"
+          ]
+        },
+        "description": "Checks the current status of a subscription.\n\n**URL Parameter:**\n- `merchant_subscription_id`: The subscription ID from setup response\n\n**Response:**\n- `local_status`: Status in your database\n- `phonepe_status`: Current status from PhonePe\n- `details`: Complete subscription details\n\n**Possible States:**\n- `PENDING`: User hasn't approved yet\n- `ACTIVE`: ✅ Subscription is active and ready\n- `COMPLETED`: Subscription completed\n- `FAILED`: Setup failed\n- `CANCELLED`: User cancelled\n\n**Use this to:**\n- Verify user has approved mandate\n- Check before triggering redemption\n- Monitor subscription health\n\n**⚠️ NO CSRF TOKEN NEEDED - This is an API route!**"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Trigger Manual Redemption",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"merchant_subscription_id\": \"MS_...\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/phonepe/autopay/redeem",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "phonepe",
+            "autopay",
+            "redeem"
+          ]
+        },
+        "description": "Triggers manual redemption (auto-debit) for an active subscription.\n\n**⚠️ IMPORTANT NOTES:**\n\n1. **Sandbox Limitation:**\n   - PhonePe Sandbox does NOT support redemption API\n   - You'll get \"AUTHORIZATION_FAILED\" or 204 No Content\n   - This is NORMAL in sandbox environment\n\n2. **Production Only:**\n   - Redemption API only works with production credentials\n   - Requires live UPI mandate approved by user\n   - Will charge real money from user's account\n\n3. **Testing in Sandbox:**\n   - You can only test subscription SETUP in sandbox\n   - Cannot test actual auto-debit in sandbox\n   - Use production for full testing\n\n**Request Body:**\n- `merchant_subscription_id` (required): Subscription ID from setup\n\n**Prerequisites:**\n- Subscription must be ACTIVE\n- User must have approved mandate\n- Cannot trigger twice in same day\n\n**Response (Production):**\n- `merchant_order_id`: New order ID for this redemption\n- `phonepe_order_id`: PhonePe's order ID\n- Transaction record created in database\n\n**Response (Sandbox):**\n- Error message explaining sandbox limitation\n- Details about subscription\n- Note about production requirement\n\n**⚠️ NO CSRF TOKEN NEEDED - This is an API route!**"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Cancel Subscription",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"merchant_subscription_id\": \"MS_...\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/phonepe/autopay/cancel",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "phonepe",
+            "autopay",
+            "cancel"
+          ]
+        },
+        "description": "Cancels an active subscription.\n\n**Request Body:**\n- `merchant_subscription_id` (required): Subscription ID to cancel\n\n**What Happens:**\n1. Sends cancellation request to PhonePe\n2. Updates local database status to CANCELLED\n3. User's mandate is revoked\n4. No more auto-debits will occur\n\n**Response:**\n- Success message if cancelled\n- Error if subscription not found or already cancelled\n\n**Use Cases:**\n- User wants to stop subscription\n- Refund scenario\n- Plan downgrade\n- Account closure\n\n**⚠️ NO CSRF TOKEN NEEDED - This is an API route!**"
+      },
+      "response": []
+    },
+    {
+      "name": "Web - Simple Payment Test Page",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/phonepe/simple-payment-test",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "phonepe",
+            "simple-payment-test"
+          ]
+        },
+        "description": "Opens the PhonePe Simple Payment Test page in browser.\n\n**⚠️ This is a WEB route, not API!**\n\n**Requirements:**\n- Must be logged in as Admin\n- Browser access only\n- CSRF token handled automatically by Laravel\n\n**Features:**\n- Interactive payment request form\n- Real-time transaction history\n- Action buttons for each transaction\n- Copy IDs functionality\n\n**Note:** Open this URL in your browser after logging in as admin."
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// No pre-request script needed",
+          "// OAuth token is handled automatically by the API"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-save merchant_subscription_id from setup response",
+          "if (pm.response.code === 200) {",
+          "    var jsonData = pm.response.json();",
+          "    if (jsonData.success && jsonData.data && jsonData.data.merchant_subscription_id) {",
+          "        pm.environment.set('merchant_subscription_id', jsonData.data.merchant_subscription_id);",
+          "        console.log('✅ Saved merchant_subscription_id:', jsonData.data.merchant_subscription_id);",
+          "    }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost/git_jignasha/craftyart/public",
+      "type": "string"
+    },
+    {
+      "key": "merchant_subscription_id",
+      "value": "MS_...",
+      "type": "string"
+    }
+  ]
+}

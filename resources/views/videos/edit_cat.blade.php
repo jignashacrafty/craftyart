@@ -314,71 +314,38 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <h6>Category Thumb</h6>
-                                <input type="file" data-accept=".jpg, .jpeg, .webp, .svg"
+                                <input type="file" 
                                     class="form-control-file form-control height-auto dynamic-file"
-                                    data-imgstore-id="category_thumb" data-nameset="true">
-                                @if($datas['cat']->category_thumb && !str_contains($datas['cat']->category_thumb, 'no_image'))
-                                    <div class="image-preview-container">
-                                        <img src="{{ config('filesystems.storage_url') }}{{ $datas['cat']->category_thumb }}"
-                                            onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'no-image-placeholder\'><i class=\'fa fa-image\'></i><p>Image not found</p></div>';"
-                                            alt="Category Thumb" />
-                                        <div class="image-info">
-                                            <strong>Current:</strong> {{ basename($datas['cat']->category_thumb) }}
-                                        </div>
-                                    </div>
-                                @else
-                                    <div class="no-image-placeholder" style="margin-top: 10px;">
-                                        <i class="fa fa-image"></i>
-                                        <p style="margin: 0;">No image uploaded</p>
-                                    </div>
-                                @endif
+                                    data-accept=".jpg, .jpeg, .webp, .svg"
+                                    data-imgstore-id="category_thumb" 
+                                    data-nameset=true
+                                    data-required=false
+                                    data-value="{{ $datas['cat']->category_thumb && !str_contains($datas['cat']->category_thumb, 'no_image') ? $contentManager::getStorageLink($datas['cat']->category_thumb) : '' }}">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <h6>Mockup</h6>
-                                <input type="file" data-accept=".jpg, .jpeg, .webp, .svg"
+                                <input type="file" 
                                     class="form-control-file form-control height-auto dynamic-file"
-                                    data-imgstore-id="mockup" data-nameset="true">
-                                @if($datas['cat']->mockup)
-                                    <div class="image-preview-container">
-                                        <img src="{{ config('filesystems.storage_url') }}{{ $datas['cat']->mockup }}"
-                                            onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'no-image-placeholder\'><i class=\'fa fa-image\'></i><p>Image not found</p></div>';"
-                                            alt="Mockup" />
-                                        <div class="image-info">
-                                            <strong>Current:</strong> {{ basename($datas['cat']->mockup) }}
-                                        </div>
-                                    </div>
-                                @else
-                                    <div class="no-image-placeholder" style="margin-top: 10px;">
-                                        <i class="fa fa-image"></i>
-                                        <p style="margin: 0;">No mockup uploaded</p>
-                                    </div>
-                                @endif
+                                    data-accept=".jpg, .jpeg, .webp, .svg"
+                                    data-imgstore-id="mockup" 
+                                    data-nameset=true
+                                    data-required=false
+                                    data-value="{{ $datas['cat']->mockup ? $contentManager::getStorageLink($datas['cat']->mockup) : '' }}">
                             </div>
                         </div>
                     </div>
                     
                     <div class="form-group">
                         <h6>Banner</h6>
-                        <input type="file" accept=".jpg, .jpeg, .webp, .svg"
+                        <input type="file" 
                             class="form-control-file form-control height-auto dynamic-file"
-                            data-imgstore-id="banner" data-nameset="true">
-                        @if($datas['cat']->banner)
-                            <div class="image-preview-container">
-                                <img src="{{ config('filesystems.storage_url') }}{{ $datas['cat']->banner }}"
-                                    onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'no-image-placeholder\'><i class=\'fa fa-image\'></i><p>Image not found</p></div>';"
-                                    alt="Banner" style="max-width: 400px;" />
-                                <div class="image-info">
-                                    <strong>Current:</strong> {{ basename($datas['cat']->banner) }}
-                                </div>
-                            </div>
-                        @else
-                            <div class="no-image-placeholder">
-                                <i class="fa fa-image"></i>
-                                <p style="margin: 0;">No banner uploaded</p>
-                            </div>
-                        @endif
+                            data-accept=".jpg, .jpeg, .webp, .svg"
+                            data-imgstore-id="banner" 
+                            data-nameset=true
+                            data-required=false
+                            data-value="{{ $datas['cat']->banner ? $contentManager::getStorageLink($datas['cat']->banner) : '' }}">
                     </div>
 
                     <br>
@@ -619,7 +586,23 @@
         console.log('Category Thumb Path:', '{{ $datas["cat"]->category_thumb ?? "N/A" }}');
         console.log('Mockup Path:', '{{ $datas["cat"]->mockup ?? "N/A" }}');
         console.log('Banner Path:', '{{ $datas["cat"]->banner ?? "N/A" }}');
-        console.log('Full Category Thumb URL:', '{{ config("filesystems.storage_url") }}{{ $datas["cat"]->category_thumb ?? "" }}');
+        
+        // Get computed values
+        const categoryThumbValue = '{{ $datas["cat"]->category_thumb && !str_contains($datas["cat"]->category_thumb, "no_image") ? $contentManager::getStorageLink($datas["cat"]->category_thumb) : "" }}';
+        const mockupValue = '{{ $datas["cat"]->mockup ? $contentManager::getStorageLink($datas["cat"]->mockup) : "" }}';
+        const bannerValue = '{{ $datas["cat"]->banner ? $contentManager::getStorageLink($datas["cat"]->banner) : "" }}';
+        
+        console.log('Category Thumb Full URL:', categoryThumbValue);
+        console.log('Mockup Full URL:', mockupValue);
+        console.log('Banner Full URL:', bannerValue);
+        
+        // Reinitialize dynamic file component
+        if (typeof dynamicFileCmp === 'function') {
+            console.log('Reinitializing dynamic file component...');
+            dynamicFileCmp();
+        } else {
+            console.error('dynamicFileCmp function not found!');
+        }
     });
 </script>
 </body>

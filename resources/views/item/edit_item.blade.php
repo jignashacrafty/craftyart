@@ -108,14 +108,25 @@
                              <div class="col-md-2 col-sm-12">
                                  <div class="form-group">
                                      <h6>Post Thumb</h6>
-                                     <input type="file" class="form-control-file form-control"
-                                         name="post_thumb_{{ $i }}"><br>
-                                     <img src="{{ config('filesystems.storage_url') }}{{ $thumb }}"
-                                         style="max-width: 100px; max-height: 100px; width: auto; height: auto" />
+                                     <input type="file" class="form-control-file form-control post-thumb-input"
+                                         name="post_thumb_{{ $i }}" accept="image/*" data-page="{{ $i }}"><br>
+                                     <div class="post-thumb-preview-{{ $i }}">
+                                         @if($thumb)
+                                             <img src="{{ config('filesystems.storage_url') }}{{ $thumb }}"
+                                                 style="max-width: 100px; max-height: 100px; width: auto; height: auto; border: 1px solid #ddd; padding: 2px; border-radius: 4px;" 
+                                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                                             <div style="display: none; padding: 5px; background: #f8d7da; border-radius: 4px; color: #721c24; font-size: 11px;">
+                                                 <i class="fa fa-exclamation-triangle"></i> Image not found
+                                             </div>
+                                         @else
+                                             <div style="padding: 5px; background: #fff3cd; border-radius: 4px; color: #856404; font-size: 11px;">
+                                                 <i class="fa fa-info-circle"></i> No image uploaded
+                                             </div>
+                                         @endif
+                                     </div>
 
-                                     <input class="form-control" type="textname"
-                                         name="post_thumb_path_{{ $i }}" value="{{ $thumb }}"
-                                         style="display: none">
+                                     <input class="form-control" type="hidden"
+                                         name="post_thumb_path_{{ $i }}" value="{{ $thumb }}">
                                  </div>
                              </div>
 
@@ -1189,6 +1200,15 @@
 
          var formData = new FormData(this);
          var url = "{{ route('item.update', [$dataArray['item']->id]) }}";
+         
+         // Log form data for debugging
+         console.log('Submitting form with pages:', count);
+         for (var pair of formData.entries()) {
+             if (pair[0].includes('post_thumb')) {
+                 console.log('Post thumb field:', pair[0], pair[1] ? pair[1].name : 'no file');
+             }
+         }
+         
          $.ajax({
              url: url,
              type: 'POST',
@@ -1204,11 +1224,17 @@
 
                  hideFields();
                  if (data.error) {
-                     window.alert(data.error);
+                     console.error('Update error:', data.error);
+                     window.alert('Error: ' + data.error);
                      $('#result').html('<div class="alert alert-danger">' + data.error + '</div>');
                  } else {
-                     window.alert(data.success);
-                     // window.location.href = "{{ route('show_item') }}";
+                     console.log('Update success:', data.success);
+                     window.alert('Success: ' + data.success);
+                     $('#result').html('<div class="alert alert-success">' + data.success + '</div>');
+                     // Reload page after 1 second to show updated images
+                     setTimeout(function() {
+                         window.location.reload();
+                     }, 1000);
                  }
 
                  setTimeout(function() {
@@ -1221,7 +1247,15 @@
                      select.disabled = true;
                  });
                  hideFields();
-                 window.alert(error.responseText);
+                 console.error('AJAX error:', error);
+                 var errorMsg = 'An error occurred while updating the template.';
+                 if (error.responseJSON && error.responseJSON.message) {
+                     errorMsg = error.responseJSON.message;
+                 } else if (error.responseText) {
+                     errorMsg = error.responseText;
+                 }
+                 window.alert('Error: ' + errorMsg);
+                 $('#result').html('<div class="alert alert-danger">' + errorMsg + '</div>');
              },
              cache: false,
              contentType: false,
@@ -1263,9 +1297,9 @@
          html = '<div class="tab-pane fade" id="page_' + id +
              '" role="tabpanel"> <div class="row"> <div class="col-md-2 col-sm-12"> <button type="button" onclick="remove_page(' +
              id +
-             ');" class="btn btn-danger form-control-file">Remove Page</button> </div> </div> <br/><div class="row"> <div class="col-md-2 col-sm-12"> <div class="form-group"> <h6>Post Thumb</h6> <input type="file" class="form-control-file form-control" name="post_thumb_' +
+             ');" class="btn btn-danger form-control-file">Remove Page</button> </div> </div> <br/><div class="row"> <div class="col-md-2 col-sm-12"> <div class="form-group"> <h6>Post Thumb</h6> <input type="file" class="form-control-file form-control post-thumb-input" name="post_thumb_' +
              id +
-             '"><br> </div> </div> <div class="col-md-2 col-sm-12"> <div class="form-group"> <h6>Select BG Type</h6> <div class="col-sm-20"> <select id="bg_type_id_' +
+             '" accept="image/*" data-page="' + id + '"><br><div class="post-thumb-preview-' + id + '" style="margin-top: 5px;"><div style="padding: 5px; background: #fff3cd; border-radius: 4px; color: #856404; font-size: 11px;"><i class="fa fa-info-circle"></i> No image uploaded</div></div> </div> </div> <div class="col-md-2 col-sm-12"> <div class="form-group"> <h6>Select BG Type</h6> <div class="col-sm-20"> <select id="bg_type_id_' +
              id + '" class="selectpicker form-control" data-style="btn-outline-primary" onchange="selectChangeFunc(' +
              id + ');" name="bg_type_id_' + id +
              '" required> @foreach ($dataArray['bg_mode'] as $bg) <option value="{{ $bg->value }}">{{ $bg->type }}</option> @endforeach </select> </div> </div> </div> <div class="col-md-2 col-sm-12"> <div class="form-group" id="back_image_field_' +
@@ -1801,6 +1835,42 @@
          if ($("input[name='new_category_id']").val() != "" && $("input[name='new_category_id']").val() != "0") {
              loadNewSearchKeywords($("input[name='new_category_id']").val())
          }
+
+         // Post Thumb image preview on file selection
+         $(document).on('change', '.post-thumb-input', function() {
+             const file = this.files[0];
+             const pageNum = $(this).data('page');
+             const previewContainer = $('.post-thumb-preview-' + pageNum);
+             
+             if (file) {
+                 // Validate file type
+                 const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                 if (!validTypes.includes(file.type)) {
+                     alert('Please select a valid image file (JPG, PNG, GIF, or WEBP)');
+                     $(this).val('');
+                     return;
+                 }
+                 
+                 // Validate file size (max 2MB)
+                 if (file.size > 2048 * 1024) {
+                     alert('Image size must be less than 2MB');
+                     $(this).val('');
+                     return;
+                 }
+                 
+                 const reader = new FileReader();
+                 reader.onload = function(e) {
+                     previewContainer.html(
+                         '<img src="' + e.target.result + '" ' +
+                         'style="max-width: 100px; max-height: 100px; width: auto; height: auto; border: 1px solid #ddd; padding: 2px; border-radius: 4px;" />' +
+                         '<div style="margin-top: 5px; padding: 5px; background: #d4edda; border-radius: 4px; color: #155724; font-size: 11px;">' +
+                         '<i class="fa fa-check-circle"></i> New image selected: ' + file.name +
+                         '</div>'
+                     );
+                 };
+                 reader.readAsDataURL(file);
+             }
+         });
      });
 
      const loadNewSearchKeywords = (newCatId) => {

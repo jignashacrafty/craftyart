@@ -993,6 +993,8 @@ class HelperController extends Controller
             return self::$frontendUrl . $slug;
         } else if ($type == 3) {
             return self::$frontendUrl . 'k/' . $slug;
+        } else if($type == 5) {
+            return self::$frontendUrl .'caricature/p' . $slug;
         }
         return self::$frontendUrl;
     }

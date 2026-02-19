@@ -217,7 +217,7 @@
                             <tbody id="tableBody">
                             @if ($OrderUsers->count() > 0)
                             @foreach ($OrderUsers as $OrderUser)
-                            <tr class="searchable-row order-row" data-order-id="{{ $OrderUser->id }}" data-user-id="{{ $OrderUser->user_id }}" style="cursor: pointer;">
+                            <tr class="searchable-row order-row" data-order-id="{{ $OrderUser->id }}" data-user-id="{{ $OrderUser->user_id }}">
                                 <td style="white-space: nowrap;">
                                     <span class="order-id-text" style="color: #007bff; font-weight: 600;">
                                         {{ $OrderUser->id ?? '-' }}
@@ -248,6 +248,7 @@
                                     @if ($OrderUser->shouldShowLink())
                                     <a href="{{ $OrderUser->getItemLink($item) }}"
                                        target="_blank" class="text-primary text-decoration-none">
+
                                         {{ $OrderUser->getItemDisplayText($item) }}
                                     </a><br>
                                     @else
@@ -309,11 +310,18 @@
                                         $canEditFollowup = false;
                                         $currentUserId = auth()->user()->id;
                                         $isSalesUser = $roleManager::isSalesEmployee(auth()->user()->user_type);
+                                        $isAdminOrManager = $roleManager::isAdmin(auth()->user()->user_type) || 
+                                                           $roleManager::isManager(auth()->user()->user_type) ||
+                                                           $roleManager::isSalesManager(auth()->user()->user_type);
                                         
+                                        // Admin, Manager, and Sales Manager can always edit followup
+                                        if ($isAdminOrManager) {
+                                            $canEditFollowup = true;
+                                        }
                                         // Sales user can edit if:
                                         // 1. Order is not assigned to anyone (emp_id = 0 or null)
                                         // 2. Order is assigned to them (emp_id = current user id)
-                                        if ($isSalesUser) {
+                                        elseif ($isSalesUser) {
                                             if (empty($OrderUser->emp_id) || $OrderUser->emp_id == 0 || $OrderUser->emp_id == $currentUserId) {
                                                 $canEditFollowup = true;
                                             }
@@ -331,20 +339,9 @@
                                        data-id="{{ $OrderUser->id }}"
                                        data-note="{{ $OrderUser->followup_note }}"
                                        data-label="{{ $OrderUser->followup_label }}"
+                                       data-label-display="{{ $followupLabels[$OrderUser->followup_label] ?? $OrderUser->followup_label }}"
                                        data-can-edit="{{ $canEditFollowup ? '1' : '0' }}"
-                                       @if ($canEditFollowup) style="cursor: pointer;" @endif></i>
-
-                                    <div class="hover-note">
-                                        <strong>Label :</strong>
-                                        @if (!empty($OrderUser->followup_label))
-                                        <span>
-                                            {{ $followupLabels[$OrderUser->followup_label] ?? $OrderUser->followup_label }}
-                                        </span><br>
-                                        @endif
-                                        <br>
-                                        <strong>Text :</strong>
-                                        {{ $OrderUser->followup_note }}
-                                    </div>
+                                       style="cursor: pointer; color: #667eea; font-size: 18px; margin-left: 8px;"></i>
                                     @endif
                                 </td>
 
@@ -412,17 +409,6 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="uses_type">Uses Type <span class="text-danger">*</span></label>
-                        <select name="uses_type" class="form-control" id="uses_type" required>
-                            <option value="">Select Uses Type</option>
-                            <option value="personal">Personal Use</option>
-                            <option value="professional">Professional Use</option>
-                        </select>
-                        <small class="form-text text-muted">
-                            <i class="fa fa-info-circle"></i> This will be saved to user's personal details
-                        </small>
-                    </div>
-                    <div class="form-group">
                         <label for="followup_note">Note</label>
                         <textarea name="followup_note" class="form-control" id="followup_note" rows="4" placeholder="Enter note"></textarea>
                     </div>
@@ -432,6 +418,52 @@
                 </div>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Followup Info Modal -->
+<div class="modal fade" id="followupInfoModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 450px;">
+        <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 20px 25px; border-radius: 16px 16px 0 0;">
+                <div style="display: flex; align-items: center; width: 100%;">
+                    <div style="background: rgba(255,255,255,0.2); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                        <i class="fa-solid fa-circle-info" style="font-size: 20px; color: #fff;"></i>
+                    </div>
+                    <h5 class="modal-title" style="color: #ffffff; font-weight: 700; font-size: 18px; margin: 0;">
+                        Follow Up Details
+                    </h5>
+                </div>
+                <button type="button" class="close" data-bs-dismiss="modal" style="color: #ffffff; opacity: 1; text-shadow: none; font-size: 24px; font-weight: 300; margin: 0; padding: 0;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 25px;">
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <i class="fa-solid fa-tag" style="color: #667eea; margin-right: 10px; font-size: 16px;"></i>
+                        <strong style="color: #495057; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Label</strong>
+                    </div>
+                    <div id="followupInfoLabel" style="background: #f8f9fa; padding: 12px 15px; border-radius: 8px; border-left: 4px solid #667eea; font-size: 14px; color: #212529; font-weight: 500;">
+                        -
+                    </div>
+                </div>
+                <div>
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <i class="fa-solid fa-comment-dots" style="color: #764ba2; margin-right: 10px; font-size: 16px;"></i>
+                        <strong style="color: #495057; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Note</strong>
+                    </div>
+                    <div id="followupInfoNote" style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #764ba2; font-size: 14px; color: #495057; line-height: 1.6; min-height: 60px; white-space: pre-wrap;">
+                        -
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e9ecef; padding: 15px 25px; background: #f8f9fa; border-radius: 0 0 16px 16px;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px; padding: 8px 20px; font-size: 13px; font-weight: 600;">
+                    Close
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -567,10 +599,10 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group">
-                                    <label for="plan_type" style="font-weight: 600; color: #495057; font-size: 13px;">Uses Type <span class="text-danger">*</span></label>
+                                    <label for="plan_type" style="font-weight: 600; color: #495057; font-size: 13px;">Usage Purpose <span class="text-danger">*</span></label>
                                     <select name="plan_type" class="form-control" id="plan_type" required
                                             style="border-radius: 8px; border: 2px solid #e9ecef; padding: 12px 15px; font-size: 14px; transition: all 0.3s;">
-                                        <option value="">Select Uses Type</option>
+                                        <option value="">Select Usage Purpose</option>
                                         <option value="personal">Personal Use</option>
                                         <option value="professional">Professional Use</option>
                                     </select>
@@ -791,94 +823,178 @@
 <!-- Transaction Modal -->
 <div class="modal fade" id="add_transaction_model" tabindex="-1" role="dialog"
     aria-labelledby="myLargeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add Transaction</h5>
-                <button type="button" class="close" data-bs-dismiss="modal" aria-hidden="true">×</button>
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.15);">
+            <!-- Modern Header -->
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 20px 25px; border-radius: 12px 12px 0 0;">
+                <div style="display: flex; align-items: center;">
+                    <div style="background: rgba(255,255,255,0.2); width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                        <i class="fa fa-money-bill-transfer" style="font-size: 20px; color: #fff;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title" style="color: #ffffff; font-weight: 700; font-size: 20px; margin: 0;">Add Transaction</h5>
+                        <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 12px;">Manually add subscription transaction</p>
+                    </div>
+                </div>
+                <button type="button" class="close" data-bs-dismiss="modal" aria-hidden="true" style="color: #ffffff; opacity: 1; text-shadow: none; font-size: 24px; font-weight: 300;">×</button>
             </div>
-            <div class="modal-body">
+            
+            <div class="modal-body" style="padding: 25px; background: #f8f9fa;">
                 <form method="post" id="add_transaction_form" enctype="multipart/form-data">
                     @csrf
-                    <div class="form-group">
-                        <h6>Email</h6>
-                        <input type="email" class="form-control" name="email" required />
-                    </div>
-
-                    <div class="form-group">
-                        <h6>Contact No</h6>
-                        <div class="input-group custom">
-                            <input type="text" class="form-control" name="contact" required="">
+                    
+                    <!-- Customer Info Section -->
+                    <div style="background: #fff; padding: 20px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                        <h6 style="color: #667eea; font-weight: 700; margin-bottom: 15px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="fa fa-user"></i> Customer Information
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label style="font-weight: 600; color: #495057; font-size: 12px; margin-bottom: 6px;">Email <span class="text-danger">*</span></label>
+                                    <input type="email" class="form-control" name="email" required 
+                                           style="border-radius: 6px; border: 1px solid #e0e0e0; padding: 8px 12px; font-size: 13px;" 
+                                           placeholder="customer@example.com" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label style="font-weight: 600; color: #495057; font-size: 12px; margin-bottom: 6px;">Contact No <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="contact" required 
+                                           style="border-radius: 6px; border: 1px solid #e0e0e0; padding: 8px 12px; font-size: 13px;" 
+                                           placeholder="9876543210" />
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="form-group">
-                        <h6>Method</h6>
-                        <input type="text" class="form-control" name="method" required />
-                    </div>
-
-                    <div class="form-group">
-                        <h6>Plan ID</h6>
-                        <div class="input-group custom">
-                            <select class="selectpicker form-control" data-style="btn-outline-primary"
-                                name="plan_id">
-                                @foreach ($datas['packageArray'] as $package)
-                                    <option value="{{ $package->id }}">{{ $package->package_name }}</option>
-                                @endforeach
-                            </select>
+                    
+                    <!-- Transaction Details Section -->
+                    <div style="background: #fff; padding: 20px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                        <h6 style="color: #667eea; font-weight: 700; margin-bottom: 15px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="fa fa-receipt"></i> Transaction Details
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label style="font-weight: 600; color: #495057; font-size: 12px; margin-bottom: 6px;">Method <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="method" required 
+                                           style="border-radius: 6px; border: 1px solid #e0e0e0; padding: 8px 12px; font-size: 13px;" 
+                                           placeholder="Razorpay, PhonePe, etc." />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label style="font-weight: 600; color: #495057; font-size: 12px; margin-bottom: 6px;">Transaction ID <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="transaction_id" required 
+                                           style="border-radius: 6px; border: 1px solid #e0e0e0; padding: 8px 12px; font-size: 13px;" 
+                                           placeholder="TXN123456789" />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label style="font-weight: 600; color: #495057; font-size: 12px; margin-bottom: 6px;">Currency</label>
+                                    <select class="form-control" name="currency_code" 
+                                            style="border-radius: 6px; border: 1px solid #e0e0e0; padding: 8px 12px; font-size: 13px;">
+                                        <option value="INR">INR (₹)</option>
+                                        <option value="USD">USD ($)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label style="font-weight: 600; color: #495057; font-size: 12px; margin-bottom: 6px;">Price Amount <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" name="price_amount" required 
+                                           style="border-radius: 6px; border: 1px solid #e0e0e0; padding: 8px 12px; font-size: 13px;" 
+                                           placeholder="0.00" step="0.01" />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label style="font-weight: 600; color: #495057; font-size: 12px; margin-bottom: 6px;">Paid Amount <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" name="paid_amount" required 
+                                           style="border-radius: 6px; border: 1px solid #e0e0e0; padding: 8px 12px; font-size: 13px;" 
+                                           placeholder="0.00" step="0.01" />
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="form-group">
-                        <h6>Transaction ID</h6>
-                        <input type="text" class="form-control" name="transaction_id" required />
-                    </div>
-
-                    <div class="form-group">
-                        <h6>Currency</h6>
-                        <select class="form-control" name="currency_code">
-                            <option value="INR">INR</option>
-                            <option value="USD">USD</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <h6>Price Amount</h6>
-                        <input type="number" class="form-control" name="price_amount" required />
-                    </div>
-
-                    <div class="form-group">
-                        <h6>Paid Amount</h6>
-                        <input type="number" class="form-control" name="paid_amount" required />
-                    </div>
-
-                    <div class="form-group">
-                        <h6>From Wallet</h6>
-                        <select class="form-control" name="fromWallet">
-                            <option value="0">False</option>
-                            <option value="1">True</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <h6>From Where</h6>
-                        <select class="form-control" name="fromWhere">
-                            <option value="Mobile">Mobile</option>
-                            <option value="Web">Web</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <h6>Coins</h6>
-                        <input type="number" class="form-control" name="coins" value="0" required />
-                    </div>
-
-                    <div class="row mt-3">
-                        <div class="col-sm-12">
-                            <button class="btn btn-primary btn-block" type="submit">Submit</button>
+                    
+                    <!-- Plan & Additional Info Section -->
+                    <div style="background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                        <h6 style="color: #667eea; font-weight: 700; margin-bottom: 15px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="fa fa-box"></i> Plan & Additional Info
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label style="font-weight: 600; color: #495057; font-size: 12px; margin-bottom: 6px;">Plan <span class="text-danger">*</span></label>
+                                    <select class="form-control" name="plan_id" 
+                                            style="border-radius: 6px; border: 1px solid #e0e0e0; padding: 8px 12px; font-size: 13px;">
+                                        @foreach ($datas['packageArray'] as $package)
+                                            <option value="{{ $package->id }}">{{ $package->package_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label style="font-weight: 600; color: #495057; font-size: 12px; margin-bottom: 6px;">Usage Purpose <span class="text-danger">*</span></label>
+                                    <select name="usage_purpose" class="form-control" required 
+                                            style="border-radius: 6px; border: 1px solid #e0e0e0; padding: 8px 12px; font-size: 13px;">
+                                        <option value="">Select Purpose</option>
+                                        <option value="personal">Personal Use</option>
+                                        <option value="professional">Professional Use</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label style="font-weight: 600; color: #495057; font-size: 12px; margin-bottom: 6px;">From Wallet</label>
+                                    <select class="form-control" name="fromWallet" 
+                                            style="border-radius: 6px; border: 1px solid #e0e0e0; padding: 8px 12px; font-size: 13px;">
+                                        <option value="0">No</option>
+                                        <option value="1">Yes</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label style="font-weight: 600; color: #495057; font-size: 12px; margin-bottom: 6px;">From Where</label>
+                                    <select class="form-control" name="fromWhere" 
+                                            style="border-radius: 6px; border: 1px solid #e0e0e0; padding: 8px 12px; font-size: 13px;">
+                                        <option value="Mobile">Mobile</option>
+                                        <option value="Web">Web</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label style="font-weight: 600; color: #495057; font-size: 12px; margin-bottom: 6px;">Coins</label>
+                                    <input type="number" class="form-control" name="coins" value="0" required 
+                                           style="border-radius: 6px; border: 1px solid #e0e0e0; padding: 8px 12px; font-size: 13px;" 
+                                           placeholder="0" />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </form>
+            </div>
+            
+            <div class="modal-footer" style="background: #f8f9fa; border-top: 2px solid #e9ecef; padding: 15px 25px; border-radius: 0 0 12px 12px;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" 
+                        style="padding: 10px 24px; border-radius: 6px; font-weight: 600; font-size: 13px; border: 2px solid #6c757d; background: transparent; color: #6c757d;">
+                    <i class="fa fa-times"></i> Cancel
+                </button>
+                <button type="submit" form="add_transaction_form" class="btn btn-primary"
+                        style="padding: 10px 24px; border-radius: 6px; font-weight: 600; font-size: 13px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; box-shadow: 0 4px 12px rgba(102,126,234,0.4);">
+                    <i class="fa fa-check"></i> Submit Transaction
+                </button>
             </div>
         </div>
     </div>
@@ -898,6 +1014,15 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     
+    /* Only ID column is clickable */
+    .order-row td:first-child {
+        cursor: pointer;
+    }
+    
+    .order-row td:first-child:hover {
+        background-color: #e7f3ff !important;
+    }
+    
     .order-row.row-expanded {
         background-color: #e7f3ff !important;
         border-left: 4px solid #007bff;
@@ -907,6 +1032,7 @@
         display: inline-block;
         align-items: center;
         white-space: nowrap;
+        cursor: pointer;
     }
     
     .order-id-text::after {
@@ -966,6 +1092,126 @@
     
     .purchase-history-container::-webkit-scrollbar-thumb:hover {
         background: #555;
+    }
+    
+    /* Add Transaction Modal Styling */
+    #add_transaction_model .form-control:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 0.15rem rgba(102,126,234,0.15) !important;
+    }
+    
+    #add_transaction_model .modal-header .close:hover {
+        opacity: 0.8;
+    }
+    
+    #add_transaction_model .btn-secondary:hover {
+        background: #6c757d !important;
+        color: #fff !important;
+        transform: translateY(-1px);
+    }
+    
+    #add_transaction_model .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(102,126,234,0.5) !important;
+    }
+    
+    /* Mobile Responsive Styles for Transaction Modal */
+    @media (max-width: 768px) {
+        #add_transaction_model .modal-dialog {
+            margin: 10px;
+            max-width: calc(100% - 20px);
+        }
+        
+        #add_transaction_model .modal-body {
+            padding: 15px !important;
+        }
+        
+        #add_transaction_model .modal-header {
+            padding: 15px !important;
+            flex-direction: column;
+            align-items: flex-start !important;
+        }
+        
+        #add_transaction_model .modal-header > div {
+            width: 100%;
+        }
+        
+        #add_transaction_model .modal-header .close {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+        }
+        
+        #add_transaction_model .row {
+            margin-left: 0;
+            margin-right: 0;
+        }
+        
+        #add_transaction_model .col-md-6,
+        #add_transaction_model .col-md-4 {
+            padding-left: 0;
+            padding-right: 0;
+            margin-bottom: 10px;
+        }
+        
+        #add_transaction_model .form-group {
+            margin-bottom: 15px !important;
+        }
+        
+        #add_transaction_model label {
+            font-size: 11px !important;
+            margin-bottom: 4px !important;
+        }
+        
+        #add_transaction_model .form-control,
+        #add_transaction_model select {
+            font-size: 12px !important;
+            padding: 6px 10px !important;
+        }
+        
+        #add_transaction_model h6 {
+            font-size: 12px !important;
+            margin-bottom: 12px !important;
+        }
+        
+        #add_transaction_model .modal-footer {
+            padding: 12px 15px !important;
+            flex-direction: column;
+        }
+        
+        #add_transaction_model .modal-footer .btn {
+            width: 100%;
+            margin-bottom: 8px;
+            padding: 10px !important;
+            font-size: 13px !important;
+        }
+        
+        #add_transaction_model .modal-footer .btn:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* Adjust section padding for mobile */
+        #add_transaction_model .modal-body > div {
+            padding: 15px !important;
+            margin-bottom: 12px !important;
+        }
+    }
+    
+    /* Tablet Responsive */
+    @media (min-width: 769px) and (max-width: 991px) {
+        #add_transaction_model .modal-dialog {
+            max-width: 90%;
+        }
+        
+        #add_transaction_model .col-md-6 {
+            flex: 0 0 50%;
+            max-width: 50%;
+        }
+        
+        #add_transaction_model .col-md-4 {
+            flex: 0 0 33.333%;
+            max-width: 33.333%;
+        }
     }
 </style>
 
@@ -1028,9 +1274,8 @@
                 // Check if user can edit this followup
                 let canEdit = false;
                 if (isAdminOrManager) {
-                    alert("Admin/Manager can only view followup status. Only assigned Sales user can update followup.");
-                    $(this).prop("checked", !isChecked); // Revert
-                    return false;
+                    // Admin/Manager/Sales Manager can always edit
+                    canEdit = true;
                 } else if (isSalesUser) {
                     // Sales user can edit if order is not assigned or assigned to them
                     if (empId === 0 || empId === currentUserId) {
@@ -1052,9 +1297,8 @@
                     $("#followup_order_id").val(id);
                     $("#followup_note").val('');
                     $("#followup_label").val('');
-                    $("#uses_type").val('');
                     
-                    // Fetch user's usage type from personal_details
+                    // Fetch user_id for followup
                     $.ajax({
                         url: "{{ route('order_user.get_user_usage') }}",
                         type: "GET",
@@ -1062,13 +1306,10 @@
                         success: function(response) {
                             if (response.success && response.user_id) {
                                 $("#followup_user_id").val(response.user_id);
-                                if (response.usage) {
-                                    $("#uses_type").val(response.usage);
-                                }
                             }
                         },
                         error: function() {
-                            console.log('Could not fetch user usage type');
+                            console.log('Could not fetch user info');
                         }
                     });
                     
@@ -1099,51 +1340,22 @@
                 }
             });
 
-            // Info Icon Double Click - Use event delegation
-            $(document).off("dblclick", ".info-icon").on("dblclick", ".info-icon", function(e) {
+            // Info Icon Click - Show modal with followup details
+            $(document).off("click", ".info-icon").on("click", ".info-icon", function(e) {
                 e.stopPropagation();
                 e.stopImmediatePropagation();
-                
-                let canEdit = $(this).data("can-edit") === 1 || $(this).data("can-edit") === '1';
-                
-                if (!canEdit) {
-                    if (isAdminOrManager) {
-                        alert("Admin/Manager can only view followup details. Only assigned Sales user can update followup.");
-                    } else {
-                        alert("This order is assigned to another Sales user. Only the assigned user can update followup.");
-                    }
-                    return false;
-                }
                 
                 let id = $(this).data("id");
                 let note = $(this).data("note");
                 let label = $(this).data("label");
-
-                currentOrderId = id;
-                $("#followup_order_id").val(id);
-                $("#followup_note").val(note || '');
-                $("#followup_label").val(label || '');
-                $("#uses_type").val('');
+                let labelDisplay = $(this).data("label-display");
                 
-                // Fetch user's usage type from personal_details
-                $.ajax({
-                    url: "{{ route('order_user.get_user_usage') }}",
-                    type: "GET",
-                    data: { order_id: id },
-                    success: function(response) {
-                        if (response.success && response.user_id) {
-                            $("#followup_user_id").val(response.user_id);
-                            if (response.usage) {
-                                $("#uses_type").val(response.usage);
-                            }
-                        }
-                    },
-                    error: function() {
-                        console.log('Could not fetch user usage type');
-                    }
-                });
+                // Populate modal
+                $("#followupInfoLabel").text(labelDisplay || '-');
+                $("#followupInfoNote").text(note || '-');
                 
-                $("#followupModal").modal("show");
+                // Show modal
+                $("#followupInfoModal").modal("show");
             });
 
             // Transaction Modal - Use event delegation
@@ -1230,24 +1442,58 @@
 
             var formData = new FormData(this);
 
+            // Show loading state
+            const $submitBtn = $('#add_transaction_form').closest('.modal').find('button[type="submit"]');
+            const originalText = $submitBtn.html();
+            $submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Processing...');
+
             $.ajax({
-                url: "{{ route('manage_subscription.submit') }}",
+                url: "{{ route('order_user.add_transaction_manually') }}",
                 type: 'POST',
                 data: formData,
                 cache: false,
                 contentType: false,
                 processData: false,
                 success: function(data) {
-                    if (data.status) {
-                        alert(data.success || 'Subscription added successfully!');
+                    $submitBtn.prop('disabled', false).html(originalText);
+                    
+                    if (data.success) {
+                        // Show success message
+                        alert('Transaction added successfully!\n\nOrder ID: ' + data.data.order_id + '\nTransaction ID: ' + data.data.transaction_id + '\nExpiry Date: ' + data.data.expiry_date);
+                        
+                        // Close modal
+                        $('#add_transaction_model').modal('hide');
+                        
+                        // Reset form
+                        $('#add_transaction_form')[0].reset();
+                        
+                        // Reload page to show updated data
                         location.reload();
                     } else {
-                        alert(data.success || data.error || 'Something went wrong!');
+                        alert(data.message || 'Something went wrong!');
                     }
                 },
                 error: function(error) {
-                    console.error(error);
-                    alert('AJAX Error: ' + error.responseText);
+                    $submitBtn.prop('disabled', false).html(originalText);
+                    
+                    let errorMsg = 'Error adding transaction';
+                    try {
+                        const response = JSON.parse(error.responseText);
+                        errorMsg = response.message || errorMsg;
+                        
+                        // Show validation errors if present
+                        if (response.errors) {
+                            let errorList = '';
+                            Object.keys(response.errors).forEach(key => {
+                                errorList += '- ' + response.errors[key].join('\n- ') + '\n';
+                            });
+                            errorMsg += ':\n\n' + errorList;
+                        }
+                    } catch(e) {
+                        errorMsg = error.responseText || errorMsg;
+                    }
+                    
+                    alert(errorMsg);
                 }
             });
         });
@@ -1255,14 +1501,6 @@
         // Followup Form Submission
         $("#followupForm").on("submit", function(e) {
             e.preventDefault();
-            
-            // Validate uses_type is selected
-            const usesType = $("#uses_type").val();
-            if (!usesType) {
-                alert("Please select Uses Type");
-                $("#uses_type").focus();
-                return false;
-            }
             
             let formData = $(this).serialize();
 
@@ -1725,21 +1963,14 @@
                         
                         // Add info icon if needed
                         if (isChecked && (data.followup_note || data.followup_label)) {
-                            const canEdit = !shouldDisable;
-                            const cursorStyle = canEdit ? 'cursor: pointer;' : '';
                             const infoIconHtml = `
                                 <i class="fa-solid fa-circle-info info-icon"
                                    data-id="${data.order_id}"
                                    data-note="${data.followup_note || ''}"
                                    data-label="${data.followup_label || ''}"
-                                   data-can-edit="${canEdit ? '1' : '0'}"
-                                   style="${cursorStyle}"></i>
-                                <div class="hover-note">
-                                    <strong>Label :</strong>
-                                    <span>${data.followup_label_display || ''}</span><br><br>
-                                    <strong>Text :</strong>
-                                    ${data.followup_note || ''}
-                                </div>
+                                   data-label-display="${data.followup_label_display || ''}"
+                                   data-can-edit="1"
+                                   style="cursor: pointer; color: #667eea; font-size: 18px; margin-left: 8px;"></i>
                             `;
                             $followupCell.append(infoIconHtml);
                         }
@@ -1749,6 +1980,31 @@
                         setTimeout(function() {
                             $row.css('background-color', '');
                         }, 2000);
+                        
+                        // Check if row should be hidden based on current filters
+                        const currentUrl = new URL(window.location.href);
+                        const followupFilter = currentUrl.searchParams.get('followup_filter');
+                        
+                        if (followupFilter) {
+                            // If "Called" filter is active and followup is unchecked, hide row
+                            if (followupFilter === 'called' && !isChecked) {
+                                console.log('🔽 Hiding row - Called filter active but followup unchecked');
+                                $row.fadeOut(300, function() {
+                                    $(this).remove();
+                                });
+                                // Also remove the collapse row
+                                $('#history-row-' + data.order_id).remove();
+                            }
+                            // If "Not Called" filter is active and followup is checked, hide row
+                            else if (followupFilter === 'not_called' && isChecked) {
+                                console.log('🔽 Hiding row - Not Called filter active but followup checked');
+                                $row.fadeOut(300, function() {
+                                    $(this).remove();
+                                });
+                                // Also remove the collapse row
+                                $('#history-row-' + data.order_id).remove();
+                            }
+                        }
                         
                         // No need to re-initialize event handlers since we're using event delegation
                         // initializeEventHandlers(); // REMOVED - causes duplicate handlers
@@ -1863,34 +2119,24 @@
                                        data-id="${data.order_id}"
                                        data-note="${data.followup_note || ''}"
                                        data-label="${data.followup_label || ''}"
-                                       data-can-edit="${canEdit ? '1' : '0'}"
-                                       style="${cursorStyle}"></i>
-                                    <div class="hover-note">
-                                        <strong>Label :</strong>
-                                        <span>${data.followup_label_display || ''}</span><br><br>
-                                        <strong>Text :</strong>
-                                        ${data.followup_note || ''}
-                                    </div>
+                                       data-label-display="${data.followup_label_display || ''}"
+                                       data-can-edit="1"
+                                       style="cursor: pointer; color: #667eea; font-size: 18px; margin-left: 8px;"></i>
                                 `;
                                 $followupCell.append(infoIconHtml);
                             } else {
                                 // Update existing info icon
                                 $infoIcon.attr('data-note', data.followup_note || '');
                                 $infoIcon.attr('data-label', data.followup_label || '');
-                                $infoIcon.attr('data-can-edit', canEdit ? '1' : '0');
-                                $infoIcon.css('cursor', canEdit ? 'pointer' : 'default');
-                                
-                                $hoverNote.html(`
-                                    <strong>Label :</strong>
-                                    <span>${data.followup_label_display || ''}</span><br><br>
-                                    <strong>Text :</strong>
-                                    ${data.followup_note || ''}
-                                `);
+                                $infoIcon.attr('data-label-display', data.followup_label_display || '');
+                                $infoIcon.attr('data-can-edit', '1');
+                                $infoIcon.css('cursor', 'pointer');
+                                $infoIcon.css('color', '#667eea');
+                                $infoIcon.css('font-size', '18px');
                             }
                         } else {
                             // Remove info icon if followup is unchecked
                             $infoIcon.remove();
-                            $hoverNote.remove();
                         }
                     }
                     
@@ -1899,6 +2145,33 @@
                     setTimeout(function() {
                         $row.css('background-color', '');
                     }, 2000);
+                    
+                    // Check if row should be hidden based on current filters
+                    const currentUrl = new URL(window.location.href);
+                    const followupFilter = currentUrl.searchParams.get('followup_filter');
+                    
+                    if (followupFilter) {
+                        const isFollowupChecked = data.followup_call == 1;
+                        
+                        // If "Called" filter is active and followup is unchecked, hide row
+                        if (followupFilter === 'called' && !isFollowupChecked) {
+                            console.log('🔽 Hiding row - Called filter active but followup unchecked');
+                            $row.fadeOut(300, function() {
+                                $(this).remove();
+                            });
+                            // Also remove the collapse row
+                            $('#history-row-' + data.order_id).remove();
+                        }
+                        // If "Not Called" filter is active and followup is checked, hide row
+                        else if (followupFilter === 'not_called' && isFollowupChecked) {
+                            console.log('🔽 Hiding row - Not Called filter active but followup checked');
+                            $row.fadeOut(300, function() {
+                                $(this).remove();
+                            });
+                            // Also remove the collapse row
+                            $('#history-row-' + data.order_id).remove();
+                        }
+                    }
                     
                     // No need to re-initialize event handlers since we're using event delegation
                     // initializeEventHandlers(); // REMOVED - causes duplicate handlers
@@ -1945,8 +2218,8 @@
         // PURCHASE HISTORY FEATURE
         // ============================================
         
-        // Click handler for entire order row (except interactive elements)
-        $(document).on('click', '.order-row, .order-row td', function(e) {
+        // Click handler ONLY for Order ID column (first column)
+        $(document).on('click', '.order-row td:first-child, .order-id-text', function(e) {
             // Stop event from bubbling up to prevent double trigger
             e.stopPropagation();
             
@@ -2040,18 +2313,17 @@
             if (data.orders.length === 0) {
                 let html = '<div style="padding:0; background:transparent;">';
                 
-                // Simple header with just close button
-                html += '<div class="purchase-history-header" style="position:sticky; top:0; z-index:100; margin-bottom:0; padding:12px 15px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius:8px 8px 0 0; box-shadow:0 2px 8px rgba(102,126,234,0.3); display:flex; justify-content:space-between; align-items:center;">';
-                html += '<div style="color:#ffffff; font-size:16px; font-weight:600; letter-spacing:0.5px;"><i class="fa fa-history" style="margin-right:8px;"></i>PURCHASE HISTORY</div>';
-                html += '<button class="btn btn-sm close-history" data-order-id="' + orderId + '" style="background:rgba(255,255,255,0.2); border:none; color:#fff; padding:8px 16px; border-radius:6px; font-weight:600; font-size:13px; transition:all 0.3s;" onmouseover="this.style.background=\'rgba(255,255,255,0.3)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.2)\'">';
-                html += '<i class="fa fa-times" style="margin-right:5px;"></i>Close</button></div>';
+                // Compact header with close button
+                html += '<div class="purchase-history-header" style="position:sticky; top:0; z-index:100; margin-bottom:0; padding:10px 15px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius:6px 6px 0 0; box-shadow:0 2px 6px rgba(102,126,234,0.2); display:flex; justify-content:space-between; align-items:center;">';
+                html += '<div style="color:#ffffff; font-size:14px; font-weight:600;"><i class="fa fa-history" style="margin-right:6px;"></i>PURCHASE HISTORY</div>';
+                html += '<button class="btn btn-sm close-history" data-order-id="' + orderId + '" style="background:rgba(255,255,255,0.2); border:none; color:#fff; padding:5px 12px; border-radius:4px; font-weight:600; font-size:12px; transition:all 0.3s;" onmouseover="this.style.background=\'rgba(255,255,255,0.3)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.2)\'">';
+                html += '<i class="fa fa-times"></i></button></div>';
                 
-                // No History Card
-                html += '<div style="background:#fff; border-radius:0 0 8px 8px; padding:60px 20px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.08);">';
-                html += '<div style="width:100px; height:100px; background:linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; box-shadow:0 4px 12px rgba(0,0,0,0.08);">';
-                html += '<i class="fa fa-shopping-cart" style="font-size:45px; color:#adb5bd;"></i></div>';
-                html += '<h4 style="margin:0 0 10px 0; color:#495057; font-weight:600; font-size:20px;">No Successful Orders</h4>';
-                html += '<p style="margin:0; color:#6c757d; font-size:15px; max-width:400px; margin:0 auto;">This customer doesn\'t have any successful purchase history yet.</p>';
+                // Compact No History Message
+                html += '<div style="background:#fff; border-radius:0 0 6px 6px; padding:20px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.06);">';
+                html += '<div style="width:50px; height:50px; background:linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">';
+                html += '<i class="fa fa-shopping-cart" style="font-size:24px; color:#adb5bd;"></i></div>';
+                html += '<p style="margin:0; color:#6c757d; font-size:14px; font-weight:500;">No successful purchase history</p>';
                 html += '</div></div>';
                 
                 $container.html(html);

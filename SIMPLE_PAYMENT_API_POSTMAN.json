@@ -1,0 +1,294 @@
+{
+  "info": {
+    "name": "Simple Payment API",
+    "description": "Common payment link generation API with minimal data requirements",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost/git_jignasha/craftyart/public/api",
+      "type": "string"
+    },
+    {
+      "key": "reference_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Create Payment Link - PhonePe (Minimal)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"amount\": 100\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/payment/create-link",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "payment",
+            "create-link"
+          ]
+        },
+        "description": "Create payment link with minimal data (only amount). Uses default PhonePe gateway."
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    var jsonData = pm.response.json();",
+              "    if (jsonData.success && jsonData.data.reference_id) {",
+              "        pm.collectionVariables.set('reference_id', jsonData.data.reference_id);",
+              "        console.log('Reference ID saved: ' + jsonData.data.reference_id);",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Create Payment Link - PhonePe (Full Data)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"amount\": 500,\n    \"email\": \"test@example.com\",\n    \"contact_no\": \"9876543210\",\n    \"user_name\": \"Test User\",\n    \"payment_method\": \"phonepe\",\n    \"description\": \"Test payment for subscription\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/payment/create-link",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "payment",
+            "create-link"
+          ]
+        },
+        "description": "Create payment link with full customer details using PhonePe."
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    var jsonData = pm.response.json();",
+              "    if (jsonData.success && jsonData.data.reference_id) {",
+              "        pm.collectionVariables.set('reference_id', jsonData.data.reference_id);",
+              "        console.log('Reference ID saved: ' + jsonData.data.reference_id);",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Create Payment Link - Razorpay",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"amount\": 250,\n    \"email\": \"razorpay@example.com\",\n    \"contact_no\": \"9999888877\",\n    \"user_name\": \"Razorpay User\",\n    \"payment_method\": \"razorpay\",\n    \"description\": \"Razorpay test payment\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/payment/create-link",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "payment",
+            "create-link"
+          ]
+        },
+        "description": "Create payment link using Razorpay gateway."
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    var jsonData = pm.response.json();",
+              "    if (jsonData.success && jsonData.data.reference_id) {",
+              "        pm.collectionVariables.set('reference_id', jsonData.data.reference_id);",
+              "        console.log('Reference ID saved: ' + jsonData.data.reference_id);",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Check Payment Status (GET)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/payment/status?reference_id={{reference_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "payment",
+            "status"
+          ],
+          "query": [
+            {
+              "key": "reference_id",
+              "value": "{{reference_id}}",
+              "description": "Reference ID from create payment link response"
+            }
+          ]
+        },
+        "description": "Check payment status using reference ID (GET method)."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Check Payment Status (POST)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"reference_id\": \"{{reference_id}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/payment/status",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "payment",
+            "status"
+          ]
+        },
+        "description": "Check payment status using reference ID (POST method)."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Test - Invalid Amount",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"amount\": 0\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/payment/create-link",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "payment",
+            "create-link"
+          ]
+        },
+        "description": "Test validation error with invalid amount (should fail)."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Test - Invalid Email",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"amount\": 100,\n    \"email\": \"invalid-email\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/payment/create-link",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "payment",
+            "create-link"
+          ]
+        },
+        "description": "Test validation error with invalid email format (should fail)."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Test - Invalid Payment Method",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"amount\": 100,\n    \"payment_method\": \"stripe\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/payment/create-link",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "payment",
+            "create-link"
+          ]
+        },
+        "description": "Test validation error with invalid payment method (should fail)."
+      },
+      "response": []
+    }
+  ]
+}

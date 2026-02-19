@@ -12,10 +12,7 @@ use App\Models\Video\VideoTemplate;
 use App\Models\Video\VideoType;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use SoareCostin\FileVault\Facades\FileVault;
-use DB;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class VideoTemplateController extends AppBaseController
@@ -29,14 +26,12 @@ class VideoTemplateController extends AppBaseController
     public function show(Request $request)
     {
         $currentuserid = Auth::user()->id;
-        $idAdmin = RoleManager::isAdminOrDesignerManager(Auth::user()->user_type);
-        $condition = "=";
-
-
-        if ($idAdmin) {
-            $condition = "!=";
-            $currentuserid = -1;
-        }
+        $userType = Auth::user()->user_type;
+        
+        // Check if user can see all items
+        $isAdminOrManager = RoleManager::isAdminOrSeoManager($userType);
+        $isSeoExecutive = RoleManager::isSeoExecutive($userType);
+        
         // Sorting
         $sortingField = $request->get('sort_by', 'created_at');
         $sortingOrder = $request->get('sort_order', 'desc');
@@ -50,10 +45,23 @@ class VideoTemplateController extends AppBaseController
         // Filtering
         $query = $request->get('query', '');
 
-        $items = VideoTemplate::with('videoCat')
-            ->where('emp_id', $condition, $currentuserid)
-            ->where('isDeleted', 0)
-            ->where(function ($queryBuilder) use ($query) {
+        $itemsQuery = VideoTemplate::with('videoCat')
+            ->where('isDeleted', 0);
+        
+        // Apply role-based filtering
+        if ($isSeoExecutive) {
+            // SEO Executive can see: emp_id = 0 (unassigned) OR emp_id = current_user_id (their own)
+            $itemsQuery->where(function($q) use ($currentuserid) {
+                $q->where('emp_id', 0)
+                  ->orWhere('emp_id', $currentuserid);
+            });
+        } elseif (!$isAdminOrManager) {
+            // Other users can only see their own items
+            $itemsQuery->where('emp_id', $currentuserid);
+        }
+        // Admin and SEO Manager can see all items (no filter)
+        
+        $items = $itemsQuery->where(function ($queryBuilder) use ($query) {
                 if (!empty($query)) {
                     $queryBuilder->where('relation_id', 'like', "%$query%")
                         ->orWhere('video_name', 'like', "%$query%")
@@ -84,19 +92,15 @@ class VideoTemplateController extends AppBaseController
     {
         $currentuserid = Auth::user()->id;
 
+        // Validate relation_id is numeric
+        $this->validate($request, [
+            'relation_id' => 'required|integer|min:0',
+            'video_thumb' => 'required|image|mimes:jpg,png,gif|max:2048',
+            'video_file' => 'required|file|mimes:mp4,mov|max:20000',
+            'zip_file' => 'required|file|mimes:zip|max:15000',
+        ]);
+
         $res = new VideoTemplate;
-
-        $accessCheck = $this->isAccessByRole("design");
-        if ($accessCheck) {
-            return response()->json([
-                'status' => false,
-                'error' => $accessCheck,
-            ]);
-        }
-
-        $this->validate($request, ['video_thumb' => 'required|image|mimes:jpg,png,gif|max:2048']);
-        $this->validate($request, ['video_file' => 'required|file|mimes:mp4,mov|max:20000']);
-        $this->validate($request, ['zip_file' => 'required|file|mimes:zip|max:15000']);
 
         $video_thumb = $request->file('video_thumb');
         if ($video_thumb != null) {
@@ -124,7 +128,7 @@ class VideoTemplateController extends AppBaseController
         }
 
         $res->emp_id = $currentuserid;
-        $res->relation_id = $request->input('relation_id');
+        $res->relation_id = (int) $request->input('relation_id'); // Cast to integer
         $res->string_id = $this->generateId();
         $res->category_id = $request->input('category_id');
 
@@ -251,7 +255,14 @@ class VideoTemplateController extends AppBaseController
             $res->folder_name = $new_name;
         }
 
-        $res->relation_id = $request->input('relation_id');
+        // Validate and cast relation_id to integer
+        if ($request->has('relation_id')) {
+            $relationId = $request->input('relation_id');
+            if (!is_numeric($relationId)) {
+                return response()->json(['error' => 'Relation ID must be a number']);
+            }
+            $res->relation_id = (int) $relationId;
+        }
 
         // Don't update these fields - they're managed in SEO edit
         // $res->category_id = $request->input('category_id');
@@ -374,10 +385,26 @@ class VideoTemplateController extends AppBaseController
 
     public function editSeo(VideoTemplate $item, $id)
     {
+        $currentuserid = Auth::user()->id;
+        $userType = Auth::user()->user_type;
+        
         $vData = VideoTemplate::where('id', $id)->where('isDeleted', 0)->first();
         if (!$vData) {
             abort(404);
         }
+
+        // Check access - SEO Executive can only edit items with emp_id = 0 or their own
+        if (RoleManager::isSeoExecutive($userType)) {
+            if ($vData->emp_id != 0 && $vData->emp_id != $currentuserid) {
+                abort(403, 'Access denied. You can only edit unassigned items or your own items.');
+            }
+        } elseif (!RoleManager::isAdminOrSeoManager($userType)) {
+            // Other users can only edit their own items
+            if ($vData->emp_id != $currentuserid) {
+                abort(403, 'Access denied. You can only edit your own items.');
+            }
+        }
+        // Admin and SEO Manager can edit all items
 
         $datas['cat'] = VideoCat::all();
         $allCategoriesCollection = VideoCat::getAllCategoriesWithSubcategories();
@@ -415,10 +442,36 @@ class VideoTemplateController extends AppBaseController
 
     public function updateSeo(Request $request, VideoTemplate $item)
     {
+        $currentuserid = Auth::user()->id;
+        $userType = Auth::user()->user_type;
+        
         $res = VideoTemplate::where('id', $request->id)->where('isDeleted', 0)->first();
         if (!$res) {
             abort(404);
         }
+
+        // Check access - SEO Executive can only edit items with emp_id = 0 or their own
+        if (RoleManager::isSeoExecutive($userType)) {
+            if ($res->emp_id != 0 && $res->emp_id != $currentuserid) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. You can only edit unassigned items or your own items.'
+                ], 403);
+            }
+            // If editing unassigned item (emp_id = 0), assign it to current user
+            if ($res->emp_id == 0) {
+                $res->emp_id = $currentuserid;
+            }
+        } elseif (!RoleManager::isAdminOrSeoManager($userType)) {
+            // Other users can only edit their own items
+            if ($res->emp_id != $currentuserid) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. You can only edit your own items.'
+                ], 403);
+            }
+        }
+        // Admin and SEO Manager can edit all items
 
         // Update basic fields
         $res->video_name = $request->input('video_name');
@@ -430,6 +483,7 @@ class VideoTemplateController extends AppBaseController
         
         $res->is_premium = $request->input('is_premium');
         $res->status = $request->input('status');
+        $res->no_index = $request->input('no_index', 1); // Default 1 if not provided
 
         // Update SEO fields
         $res->id_name = $request->input('id_name');
@@ -495,5 +549,32 @@ class VideoTemplateController extends AppBaseController
             'success' => true,
             'message' => 'SEO data updated successfully.'
         ]);
+    }
+
+    public function noindex_update(Request $request, $id)
+    {
+        // Only Admin or SEO Manager can update No Index status
+        if (!\App\Http\Controllers\Utils\RoleManager::isAdminOrSeoManager(auth()->user()->user_type)) {
+            return response()->json([
+                'error' => "Ask admin or manager for changes"
+            ]);
+        }
+
+        try {
+            $res = \App\Models\Video\VideoTemplate::where('id', $id)->where('isDeleted', 0)->firstOrFail();
+            
+            // Toggle No Index status
+            $res->no_index = $res->no_index == '1' ? '0' : '1';
+            
+            if ($res->save()) {
+                return response()->json([
+                    'success' => 'done'
+                ]);
+            } else {
+                return response()->json(['error' => 'Failed to save'], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Data not found'], 404);
+        }
     }
 }

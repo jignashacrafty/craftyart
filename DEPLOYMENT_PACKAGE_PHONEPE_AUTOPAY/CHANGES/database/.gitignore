@@ -1,8 +1,0 @@
-*.sqlite
-*.sqlite-journal
-/vendor
-/node_modules
-.env
-.env.*
-/storage/*.key
-/public/storage

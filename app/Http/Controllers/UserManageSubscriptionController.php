@@ -95,6 +95,25 @@ class UserManageSubscriptionController extends AppBaseController
             $paidAmount = $request->paid_amount;
             $from_where = $request->fromWhere;
             $promo_code_id = $request->promo_code_id ?? 0;
+            
+            // Get email and contact from request
+            $email = $request->email;
+            $contact = $request->contact;
+
+            // Find or create user based on email
+            if ($email) {
+                $user_data = UserData::where("email", $email)->first();
+                if ($user_data) {
+                    $user_id = $user_data->uid;
+                }
+            }
+            
+            if (!$user_id) {
+                return response()->json([
+                    'status' => false,
+                    'success' => "User ID or Email is required.",
+                ]);
+            }
 
             $user_data = UserData::where("uid", $user_id)->first();
             if (!$user_data) {
@@ -102,6 +121,22 @@ class UserManageSubscriptionController extends AppBaseController
                     'status' => false,
                     'success' => "User not found.",
                 ]);
+            }
+            
+            // Update usage_purpose in personal_details if provided
+            if ($request->has('usage_purpose') && !empty($request->usage_purpose)) {
+                $personalDetails = \App\Models\PersonalDetails::where('uid', $user_id)->first();
+                
+                if ($personalDetails) {
+                    $personalDetails->usage = $request->usage_purpose;
+                    $personalDetails->save();
+                } else {
+                    // Create new personal details record if doesn't exist
+                    \App\Models\PersonalDetails::create([
+                        'uid' => $user_id,
+                        'usage' => $request->usage_purpose,
+                    ]);
+                }
             }
 
             $data = PaymentController::enterTransData($user_id, $transaction_id, $payment_method, $plan_id, $currency_code, $from_where, 1);

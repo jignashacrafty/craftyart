@@ -9,7 +9,7 @@
                 <div style="display: flex; flex-direction: column; height: 90vh; overflow: hidden;">
                     <div class="row justify-content-between">
                         <div class="col-md-3">
-                            @if ($roleManager::onlyDesignerAccess(Auth::user()->user_type))
+                            @if ($roleManager::isAdminOrSeoManager(Auth::user()->user_type) || $roleManager::isSeoExecutive(Auth::user()->user_type))
                                 <button type="button" class="btn btn-primary m-1 item-form-input" id="addNewvideoCatBtn">
                                     + Add video Category
                                 </button>
@@ -61,7 +61,7 @@
                                                     <i class="dw dw-edit2"></i> Edit
                                                 </button>
 
-                                                @if ($roleManager::isAdminOrDesignerManager(Auth::user()->user_type))
+                                                @if ($roleManager::isAdminOrSeoManager(Auth::user()->user_type))
                                                     <a class="dropdown-item" href="#"
                                                         onclick="deletevideoCategory({{ $videoCat['id'] }})">
                                                         <i class="dw dw-delete-3"></i> Delete

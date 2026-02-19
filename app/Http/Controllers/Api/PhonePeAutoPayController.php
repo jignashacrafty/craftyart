@@ -52,10 +52,10 @@ class PhonePeAutoPayController extends Controller
         try {
             $user = UserData::where('uid', $request->user_id)->first();
             if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User not found'
-                ], 404);
+                return ResponseHandler::sendResponse(
+                    $request,
+                    new ResponseInterface(404, false, 'User not found')
+                );
             }
             
             $amount = $request->amount;
@@ -77,32 +77,45 @@ class PhonePeAutoPayController extends Controller
             $token = $this->tokenService->getAccessToken();
             
             // Determine payment mode - for sandbox, use UPI_INTENT
+
             $payload = [
                 "merchantId" => env('PHONEPE_MERCHANT_ID', 'M23LAMPVYPELC'),
                 "merchantOrderId" => $merchantOrderId,
                 "merchantUserId" => env('PHONEPE_MERCHANT_ID', 'M23LAMPVYPELC'),
                 "amount" => $amount * 100,
                 "paymentFlow" => [
-                    "type" => "SUBSCRIPTION_CHECKOUT_SETUP",
-                    "message" => "Monthly Subscription",
+                    "type" => "SUBSCRIPTION_SETUP",
+                    "merchantSubscriptionId" => $merchantSubscriptionId,
+                    "authWorkflowType" => "TRANSACTION",
+                    "amountType" => "FIXED",
+                    "maxAmount" => $amount * 100,
+                    "frequency" => "Monthly",
                     "merchantUrls" => [
                         "redirectUrl" => url('/api/phonepe/autopay/callback'),
                         "cancelRedirectUrl" => url('/api/phonepe/autopay/callback'),
                     ],
-                    "subscriptionDetails" => [
-                        "subscriptionType" => "RECURRING",
-                        "merchantSubscriptionId" => $merchantSubscriptionId,
-                        "authWorkflowType" => "TRANSACTION",
-                        "amountType" => "FIXED",
-                        "maxAmount" => $amount * 100,
-                        "recurringAmount" => $amount * 100,
-                        "frequency" => "Monthly",
-                        "productType" => "UPI_MANDATE",
-                        "expireAt" => now()->addMonths(12)->timestamp * 1000,
+                    "expireAt" => now()->addMonths(12)->timestamp * 1000,
+                    "paymentMode" => [
+                        "type" => "UPI_INTENT",
+                        "targetApp" => $request->target_app,
                     ],
+//                    "subscriptionDetails" => [
+//                        "subscriptionType" => "RECURRING",
+//                        "merchantSubscriptionId" => $merchantSubscriptionId,
+//
+//
+//                        "recurringAmount" => $amount * 100,
+//                        "productType" => "UPI_MANDATE",
+//
+//                    ],
+                ],
+                "deviceContext" => [
+                    "deviceOS"=> "ANDROID"
                 ],
                 "expireAfter" => 3000,
             ];
+
+            dd($payload);
             
             // Use checkout API, not subscriptions API
             $url = $this->production
@@ -116,7 +129,6 @@ class PhonePeAutoPayController extends Controller
             ])->post($url, $payload);
             
             $data = $response->json();
-            
             Log::info('📤 PhonePe AutoPay Setup Response', [
                 'merchant_order_id' => $merchantOrderId,
                 'http_code' => $response->status(),
@@ -126,12 +138,13 @@ class PhonePeAutoPayController extends Controller
             
             // Check for authorization errors
             if (isset($data['code']) && $data['code'] === 'AUTHORIZATION_FAILED') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'PhonePe Authorization Failed',
-                    'error' => 'Authorization failed. Please check credentials.',
-                    'details' => $data
-                ], 400);
+                return ResponseHandler::sendResponse(
+                    $request,
+                    new ResponseInterface(400, false, 'PhonePe Authorization Failed', [
+                        'error' => 'Authorization failed. Please check credentials.',
+                        'details' => $data
+                    ])
+                );
             }
             
             // Check for successful response (checkout API returns redirectUrl)
@@ -158,25 +171,27 @@ class PhonePeAutoPayController extends Controller
                     ]
                 ]);
                 
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Subscription setup initiated successfully',
-                    'data' => [
-                        'merchant_order_id' => $merchantOrderId,
-                        'merchant_subscription_id' => $merchantSubscriptionId,
-                        'phonepe_order_id' => $data['orderId'] ?? null,
-                        'redirect_url' => $data['redirectUrl'],
-                        'state' => $data['state'] ?? 'PENDING',
-                        'expire_at' => $data['expireAt'] ?? null
-                    ]
-                ]);
+                return ResponseHandler::sendResponse(
+                    $request,
+                    new ResponseInterface(200, true, 'Subscription setup initiated successfully', [
+                        'data' => [
+                            'merchant_order_id' => $merchantOrderId,
+                            'merchant_subscription_id' => $merchantSubscriptionId,
+                            'phonepe_order_id' => $data['orderId'] ?? null,
+                            'redirect_url' => $data['redirectUrl'],
+                            'state' => $data['state'] ?? 'PENDING',
+                            'expire_at' => $data['expireAt'] ?? null
+                        ]
+                    ])
+                );
             }
             
-            return response()->json([
-                'success' => false,
-                'message' => 'Subscription setup failed',
-                'error' => $data
-            ], 400);
+            return ResponseHandler::sendResponse(
+                $request,
+                new ResponseInterface(400, false, 'Subscription setup failed', [
+                    'error' => $data
+                ])
+            );
             
         } catch (\Exception $e) {
             Log::error('❌ PhonePe AutoPay Setup Exception', [
@@ -184,10 +199,10 @@ class PhonePeAutoPayController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             
-            return response()->json([
-                'success' => false,
-                'message' => 'Setup failed: ' . $e->getMessage()
-            ], 500);
+            return ResponseHandler::sendResponse(
+                $request,
+                new ResponseInterface(500, false, 'Setup failed: ' . $e->getMessage())
+            );
         }
     }
     
@@ -205,10 +220,10 @@ class PhonePeAutoPayController extends Controller
             $subscription = PhonePeSubscription::where('merchant_subscription_id', $request->merchant_subscription_id)->first();
             
             if (!$subscription) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Subscription not found'
-                ], 404);
+                return ResponseHandler::sendResponse(
+                    $request,
+                    new ResponseInterface(404, false, 'Subscription not found')
+                );
             }
             
             $token = $this->tokenService->getAccessToken();
@@ -232,27 +247,28 @@ class PhonePeAutoPayController extends Controller
                     'merchant_subscription_id' => $request->merchant_subscription_id
                 ]);
                 
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Subscription cancelled successfully'
-                ]);
+                return ResponseHandler::sendResponse(
+                    $request,
+                    new ResponseInterface(200, true, 'Subscription cancelled successfully')
+                );
             }
             
-            return response()->json([
-                'success' => false,
-                'message' => 'Cancellation failed',
-                'error' => $response->json()
-            ], $response->status());
+            return ResponseHandler::sendResponse(
+                $request,
+                new ResponseInterface($response->status(), false, 'Cancellation failed', [
+                    'error' => $response->json()
+                ])
+            );
             
         } catch (\Exception $e) {
             Log::error('❌ Subscription cancellation exception', [
                 'error' => $e->getMessage()
             ]);
             
-            return response()->json([
-                'success' => false,
-                'message' => 'Cancellation failed: ' . $e->getMessage()
-            ], 500);
+            return ResponseHandler::sendResponse(
+                $request,
+                new ResponseInterface(500, false, 'Cancellation failed: ' . $e->getMessage())
+            );
         }
     }
     
@@ -260,16 +276,16 @@ class PhonePeAutoPayController extends Controller
      * Get subscription status
      * GET /api/phonepe/autopay/status/{merchantSubscriptionId}
      */
-    public function getSubscriptionStatus($merchantSubscriptionId)
+    public function getSubscriptionStatus(Request $request, $merchantSubscriptionId)
     {
         try {
             $subscription = PhonePeSubscription::where('merchant_subscription_id', $merchantSubscriptionId)->first();
             
             if (!$subscription) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Subscription not found'
-                ], 404);
+                return ResponseHandler::sendResponse(
+                    $request,
+                    new ResponseInterface(404, false, 'Subscription not found')
+                );
             }
             
             $token = $this->tokenService->getAccessToken();
@@ -292,31 +308,34 @@ class PhonePeAutoPayController extends Controller
                     $subscription->save();
                 }
                 
-                return response()->json([
-                    'success' => true,
-                    'data' => [
-                        'local_status' => $subscription->status,
-                        'phonepe_status' => $data['state'] ?? null,
-                        'details' => $data
-                    ]
-                ]);
+                return ResponseHandler::sendResponse(
+                    $request,
+                    new ResponseInterface(200, true, 'Subscription status retrieved', [
+                        'data' => [
+                            'local_status' => $subscription->status,
+                            'phonepe_status' => $data['state'] ?? null,
+                            'details' => $data
+                        ]
+                    ])
+                );
             }
             
-            return response()->json([
-                'success' => false,
-                'message' => 'Status check failed',
-                'error' => $data
-            ], $response->status());
+            return ResponseHandler::sendResponse(
+                $request,
+                new ResponseInterface($response->status(), false, 'Status check failed', [
+                    'error' => $data
+                ])
+            );
             
         } catch (\Exception $e) {
             Log::error('❌ Status check exception', [
                 'error' => $e->getMessage()
             ]);
             
-            return response()->json([
-                'success' => false,
-                'message' => 'Status check failed: ' . $e->getMessage()
-            ], 500);
+            return ResponseHandler::sendResponse(
+                $request,
+                new ResponseInterface(500, false, 'Status check failed: ' . $e->getMessage())
+            );
         }
     }
     
@@ -336,10 +355,10 @@ class PhonePeAutoPayController extends Controller
                 ->first();
             
             if (!$subscription) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Active subscription not found'
-                ], 404);
+                return ResponseHandler::sendResponse(
+                    $request,
+                    new ResponseInterface(404, false, 'Active subscription not found')
+                );
             }
             
             // Check if already processed today
@@ -350,10 +369,10 @@ class PhonePeAutoPayController extends Controller
                 ->exists();
             
             if ($alreadyProcessed) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Manual redemption already triggered today'
-                ], 400);
+                return ResponseHandler::sendResponse(
+                    $request,
+                    new ResponseInterface(400, false, 'Manual redemption already triggered today')
+                );
             }
             
             $token = $this->tokenService->getAccessToken();
@@ -397,35 +416,37 @@ class PhonePeAutoPayController extends Controller
             
             // Handle 204 No Content (successful but no body)
             if ($response->status() === 204) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'PhonePe Subscription Redemption API Not Available in Sandbox',
-                    'error' => 'The subscription redemption/auto-debit API is only available in production environment. In sandbox, you can only test subscription setup.',
-                    'details' => [
-                        'subscription_id' => $subscription->id,
-                        'merchant_subscription_id' => $request->merchant_subscription_id,
-                        'amount' => $subscription->amount,
-                        'next_billing_date' => $subscription->next_billing_date,
-                        'http_code' => 204,
-                        'note' => 'To test auto-debit, you need production credentials and a live UPI mandate.'
-                    ]
-                ], 400);
+                return ResponseHandler::sendResponse(
+                    $request,
+                    new ResponseInterface(400, false, 'PhonePe Subscription Redemption API Not Available in Sandbox', [
+                        'error' => 'The subscription redemption/auto-debit API is only available in production environment. In sandbox, you can only test subscription setup.',
+                        'details' => [
+                            'subscription_id' => $subscription->id,
+                            'merchant_subscription_id' => $request->merchant_subscription_id,
+                            'amount' => $subscription->amount,
+                            'next_billing_date' => $subscription->next_billing_date,
+                            'http_code' => 204,
+                            'note' => 'To test auto-debit, you need production credentials and a live UPI mandate.'
+                        ]
+                    ])
+                );
             }
             
             // Check for authorization errors (sandbox limitation)
             if (isset($data['code']) && $data['code'] === 'AUTHORIZATION_FAILED') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'PhonePe Subscription Redemption API Not Available in Sandbox',
-                    'error' => 'The subscription redemption/auto-debit API is only available in production environment. In sandbox, you can only test subscription setup.',
-                    'details' => [
-                        'subscription_id' => $subscription->id,
-                        'merchant_subscription_id' => $request->merchant_subscription_id,
-                        'amount' => $subscription->amount,
-                        'next_billing_date' => $subscription->next_billing_date,
-                        'note' => 'To test auto-debit, you need production credentials and a live UPI mandate.'
-                    ]
-                ], 400);
+                return ResponseHandler::sendResponse(
+                    $request,
+                    new ResponseInterface(400, false, 'PhonePe Subscription Redemption API Not Available in Sandbox', [
+                        'error' => 'The subscription redemption/auto-debit API is only available in production environment. In sandbox, you can only test subscription setup.',
+                        'details' => [
+                            'subscription_id' => $subscription->id,
+                            'merchant_subscription_id' => $request->merchant_subscription_id,
+                            'amount' => $subscription->amount,
+                            'next_billing_date' => $subscription->next_billing_date,
+                            'note' => 'To test auto-debit, you need production credentials and a live UPI mandate.'
+                        ]
+                    ])
+                );
             }
             
             if ($response->successful() && isset($data['orderId'])) {
@@ -446,31 +467,33 @@ class PhonePeAutoPayController extends Controller
                     'merchant_order_id' => $merchantOrderId
                 ]);
                 
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Manual redemption triggered',
-                    'data' => [
-                        'merchant_order_id' => $merchantOrderId,
-                        'phonepe_order_id' => $data['orderId']
-                    ]
-                ]);
+                return ResponseHandler::sendResponse(
+                    $request,
+                    new ResponseInterface(200, true, 'Manual redemption triggered', [
+                        'data' => [
+                            'merchant_order_id' => $merchantOrderId,
+                            'phonepe_order_id' => $data['orderId']
+                        ]
+                    ])
+                );
             }
             
-            return response()->json([
-                'success' => false,
-                'message' => 'Manual redemption failed',
-                'error' => $data
-            ], $response->status());
+            return ResponseHandler::sendResponse(
+                $request,
+                new ResponseInterface($response->status(), false, 'Manual redemption failed', [
+                    'error' => $data
+                ])
+            );
             
         } catch (\Exception $e) {
             Log::error('❌ Manual redemption exception', [
                 'error' => $e->getMessage()
             ]);
             
-            return response()->json([
-                'success' => false,
-                'message' => 'Manual redemption failed: ' . $e->getMessage()
-            ], 500);
+            return ResponseHandler::sendResponse(
+                $request,
+                new ResponseInterface(500, false, 'Manual redemption failed: ' . $e->getMessage())
+            );
         }
     }
 }

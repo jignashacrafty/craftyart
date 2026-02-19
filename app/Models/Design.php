@@ -144,6 +144,10 @@ class Design extends Model
     use HasFactory;
     use UpdateLogger;
 
+     protected $fillable = [
+        'additional_thumb','post_thumb'
+    ];
+
 //     public function getNewRelatedTagsAttribute($value): array
 //     {
 //         return match (true) {
@@ -165,6 +169,11 @@ class Design extends Model
     }
 
     public function newParent(): BelongsTo
+    {
+        return $this->belongsTo(NewCategory::class, 'new_category_id');
+    }
+
+    public function newCategory(): BelongsTo
     {
         return $this->belongsTo(NewCategory::class, 'new_category_id');
     }

@@ -45,8 +45,8 @@ class StorageUtils
     public static function delete($file): void
     {
         try {
-            if (Storage::exists($file)) {
-                Storage::delete($file);
+            if (Storage::disk('public')->exists($file)) {
+                Storage::disk('public')->delete($file);
             }
         } catch (\Exception $e) {
         }

@@ -1,0 +1,349 @@
+{
+  "info": {
+    "name": "Order User APIs - Complete Collection",
+    "description": "Complete Order User Management APIs with Authentication and Transaction Management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://192.168.29.64/git_jignasha/craftyart/public",
+      "type": "string"
+    },
+    {
+      "key": "api_base_url",
+      "value": "http://192.168.29.64/git_jignasha/craftyart/public/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Login (Simple JSON)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.success && jsonData.data.token) {",
+                  "        pm.collectionVariables.set('token', jsonData.data.token);",
+                  "        console.log('Token saved:', jsonData.data.token.substring(0, 50) + '...');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"orderuser@test.com\",\n  \"password\": \"test123\",\n  \"device_id\": \"postman-test\"\n}"
+            },
+            "url": {
+              "raw": "{{api_base_url}}/order-user-auth/login",
+              "host": [
+                "{{api_base_url}}"
+              ],
+              "path": [
+                "order-user-auth",
+                "login"
+              ]
+            },
+            "description": "Simple login with JSON response\n\nTest Credentials:\n- Email: orderuser@test.com\n- Password: test123"
+          }
+        },
+        {
+          "name": "Verify Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api_base_url}}/order-user-auth/verify-token",
+              "host": [
+                "{{api_base_url}}"
+              ],
+              "path": [
+                "order-user-auth",
+                "verify-token"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"postman-test\"\n}"
+            },
+            "url": {
+              "raw": "{{api_base_url}}/order-user-auth/logout",
+              "host": [
+                "{{api_base_url}}"
+              ],
+              "path": [
+                "order-user-auth",
+                "logout"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Public APIs (No Auth)",
+      "item": [
+        {
+          "name": "Get All Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{api_base_url}}/order-user?per_page=10&page=1",
+              "host": [
+                "{{api_base_url}}"
+              ],
+              "path": [
+                "order-user"
+              ],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Plans (New Sub)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{api_base_url}}/order-user/get-plans?subscription_type=new_sub",
+              "host": [
+                "{{api_base_url}}"
+              ],
+              "path": [
+                "order-user",
+                "get-plans"
+              ],
+              "query": [
+                {
+                  "key": "subscription_type",
+                  "value": "new_sub"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Validate Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"vrajsurani606@gmail.com\"\n}"
+            },
+            "url": {
+              "raw": "{{api_base_url}}/order-user/validate-email",
+              "host": [
+                "{{api_base_url}}"
+              ],
+              "path": [
+                "order-user",
+                "validate-email"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Purchase History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{api_base_url}}/order-user/purchase-history/1",
+              "host": [
+                "{{api_base_url}}"
+              ],
+              "path": [
+                "order-user",
+                "purchase-history",
+                "1"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Protected APIs (Auth Required)",
+      "item": [
+        {
+          "name": "Update Followup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 6009,\n  \"followup_call\": 1,\n  \"followup_note\": \"Customer interested\",\n  \"followup_label\": \"interested\"\n}"
+            },
+            "url": {
+              "raw": "{{api_base_url}}/order-user/followup-update",
+              "host": [
+                "{{api_base_url}}"
+              ],
+              "path": [
+                "order-user",
+                "followup-update"
+              ]
+            },
+            "description": "⚠️ AUTHENTICATION REQUIRED\n\nUpdate followup status for an order\n\nRequired:\n- id: Order ID\n- followup_call: 0 or 1\n\nOptional:\n- followup_note: Note text\n- followup_label: Label key (interested, highly_interested, need_time, etc.)\n\nResponse includes:\n- emp_id: Employee ID who updated\n- follow_by: Employee name who updated"
+          }
+        },
+        {
+          "name": "Create Payment Link",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"contact_no\": \"9876543210\",\n  \"payment_method\": \"razorpay\",\n  \"plan_id\": \"1\",\n  \"subscription_type\": \"new_sub\",\n  \"amount\": 999,\n  \"plan_type\": \"professional\",\n  \"usage_type\": \"professional\",\n  \"caricature\": 0\n}"
+            },
+            "url": {
+              "raw": "{{api_base_url}}/order-user/create-payment-link",
+              "host": [
+                "{{api_base_url}}"
+              ],
+              "path": [
+                "order-user",
+                "create-payment-link"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Transaction Manually",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"vrajsurani606@gmail.com\",\n  \"contact\": \"9876543210\",\n  \"method\": \"Razorpay\",\n  \"transaction_id\": \"TXN123456789\",\n  \"currency_code\": \"INR\",\n  \"price_amount\": 999,\n  \"paid_amount\": 999,\n  \"plan_id\": 1,\n  \"usage_purpose\": \"professional\",\n  \"fromWallet\": 0,\n  \"fromWhere\": \"Mobile\",\n  \"coins\": 0\n}"
+            },
+            "url": {
+              "raw": "{{api_base_url}}/order-user/add-transaction-manually",
+              "host": [
+                "{{api_base_url}}"
+              ],
+              "path": [
+                "order-user",
+                "add-transaction-manually"
+              ]
+            },
+            "description": "⚠️ AUTHENTICATION REQUIRED\n\nManually add subscription transaction\n\nRequired:\n- email: User email (must exist)\n- contact: Contact number\n- method: Payment method\n- transaction_id: Transaction ID\n- currency_code: INR or USD\n- price_amount: Original price\n- paid_amount: Paid amount\n- plan_id: Plan ID\n- usage_purpose: personal/professional\n\nOptional:\n- fromWallet: 0 or 1\n- fromWhere: Mobile/Web\n- coins: Coins to add"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Web Routes",
+      "item": [
+        {
+          "name": "Order User Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/order_user?per_page=10&page=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "order_user"
+              ],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

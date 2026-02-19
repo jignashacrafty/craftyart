@@ -241,7 +241,12 @@
                                 <td class="id-cell">{{ $cat->id_name }}</td>
                                 <td class="cat-thumb-cell">
                                     @if($cat->category_thumb && !str_contains($cat->category_thumb, 'no_image'))
-                                        <img src="{{ config('filesystems.storage_url') }}{{ $cat->category_thumb }}"
+                                        @php
+                                            $thumbUrl = filter_var($cat->category_thumb, FILTER_VALIDATE_URL) 
+                                                ? $cat->category_thumb 
+                                                : config('filesystems.storage_url') . $cat->category_thumb;
+                                        @endphp
+                                        <img src="{{ $thumbUrl }}"
                                             onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%2260%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22100%22 height=%2260%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2212%22%3ENo Image%3C/text%3E%3C/svg%3E';"
                                             class="cat-thumb-img" alt="Thumb" />
                                     @else
@@ -250,7 +255,12 @@
                                 </td>
                                 <td class="cat-thumb-cell">
                                     @if($cat->mockup)
-                                        <img src="{{ config('filesystems.storage_url') }}{{ $cat->mockup }}"
+                                        @php
+                                            $mockupUrl = filter_var($cat->mockup, FILTER_VALIDATE_URL) 
+                                                ? $cat->mockup 
+                                                : config('filesystems.storage_url') . $cat->mockup;
+                                        @endphp
+                                        <img src="{{ $mockupUrl }}"
                                             onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%2260%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22100%22 height=%2260%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2212%22%3ENo Image%3C/text%3E%3C/svg%3E';"
                                             class="cat-thumb-img" alt="Mockup" />
                                     @else

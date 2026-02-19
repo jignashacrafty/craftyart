@@ -24,19 +24,33 @@ class VideoCatController extends AppBaseController
 
     public function store(Request $request)
     {
-        $res = new VideoCat;
-
-        $accessCheck = $this->isAccessByRole("design");
+        // Check access for creating new category
+        $accessCheck = $this->isAccessByRole("seo_all");
         if ($accessCheck) {
             return response()->json([
-                'status' => false,
                 'error' => $accessCheck,
             ]);
         }
 
+        $res = new VideoCat;
+
         // Basic fields
         $res->category_name = $request->input('category_name');
         $res->id_name = $request->input('id_name');
+        
+        // Generate cat_link based on parent category
+        $parentCategoryId = $request->input('parent_category_id', 0);
+        if ($parentCategoryId && $parentCategoryId != 0) {
+            $parentCat = VideoCat::find($parentCategoryId);
+            if ($parentCat) {
+                $res->cat_link = $parentCat->id_name . '/' . $res->id_name;
+            } else {
+                $res->cat_link = $res->id_name;
+            }
+        } else {
+            $res->cat_link = $res->id_name;
+        }
+        
         $res->canonical_link = $request->input('canonical_link');
         $res->seo_emp_id = $request->input('seo_emp_id');
         $res->meta_title = $request->input('meta_title');
@@ -120,16 +134,32 @@ class VideoCatController extends AppBaseController
 
         $res->app_id = $request->input('app_id');
         
-        // Handle JSON fields - don't double encode, model will handle it
-        if ($request->has('contents')) {
-            $contents = $request->input('contents');
-            // If it's a JSON string from form, decode it
-            $res->contents = is_string($contents) ? json_decode($contents, true) : $contents;
+        // Generate folder string for file storage
+        $fldrStr = \App\Http\Controllers\HelperController::generateFolderID('');
+        while (VideoCat::where('fldr_str', $fldrStr)->exists()) {
+            $fldrStr = \App\Http\Controllers\HelperController::generateFolderID('');
         }
-        if ($request->has('faqs')) {
-            $faqs = $request->input('faqs');
-            $res->faqs = is_string($faqs) ? json_decode($faqs, true) : $faqs;
+        $res->fldr_str = $fldrStr;
+        
+        // Handle contents - store as JSON file
+        if ($request->input('contents')) {
+            $contents = \App\Http\Controllers\Utils\ContentManager::getContents($request->input('contents'), $fldrStr);
+            $contentPath = 'ct/' . $fldrStr . '/jn/' . StorageUtils::getNewName() . ".json";
+            StorageUtils::put($contentPath, $contents);
+            $res->contents = $contentPath;
         }
+        
+        // Handle faqs - store as JSON file
+        if (isset($request->faqs)) {
+            $faqPath = 'ct/' . $fldrStr . '/fq/' . StorageUtils::getNewName() . ".json";
+            $faqs = [];
+            $faqs['title'] = $request->faqs_title ?? '';
+            $faqs['faqs'] = json_decode($request->faqs);
+            StorageUtils::put($faqPath, json_encode($faqs));
+            $res->faqs = $faqPath;
+        }
+        
+        // Handle top_keywords - keep as JSON in database
         if ($request->has('top_keywords')) {
             $topKeywords = $request->input('top_keywords');
             $res->top_keywords = is_string($topKeywords) ? json_decode($topKeywords, true) : $topKeywords;
@@ -202,7 +232,13 @@ class VideoCatController extends AppBaseController
 
     public function edit(VideoCat $videoCat, $id)
     {
-        $datas['cat'] = VideoCat::findOrFail($id);
+        $cat = VideoCat::findOrFail($id);
+        
+        // Load contents and faqs from JSON files
+        $cat->contents = isset($cat->contents) ? StorageUtils::get($cat->contents) : "";
+        $cat->faqs = isset($cat->faqs) ? StorageUtils::get($cat->faqs) : "";
+        
+        $datas['cat'] = $cat;
         $datas['allCategories'] = VideoCat::getAllCategoriesWithSubcategories();
         $datas['appArray'] = \App\Models\AppCategory::all();
         $datas['userRole'] = \App\Models\User::whereIn('user_type', [1, 2, 3])->get();
@@ -212,19 +248,41 @@ class VideoCatController extends AppBaseController
 
     public function update(Request $request, VideoCat $videoCat)
     {
+        $currentuserid = auth()->user()->id;
         $res = VideoCat::findOrFail($request->id);
 
-        $accessCheck = $this->isAccessByRole("design", $res->id, $res->emp_id ?? null);
+        // Get SEO employee IDs for access check
+        $seoEmpIds = $res->seo_emp_id ?? '';
+        
+        // Check access - user can edit if they created it or are assigned as SEO
+        $accessCheck = $this->isAccessByRole("seo", $request->id, $res->emp_id ?? $currentuserid, [$seoEmpIds]);
         if ($accessCheck) {
             if ($request->ajax()) {
-                return response()->json(['message' => $accessCheck], 403);
+                return response()->json(['error' => $accessCheck], 403);
             }
             return redirect()->back()->with('error', $accessCheck);
         }
 
         // Update basic fields
         $res->category_name = $request->input('category_name');
+        $oldIdName = $res->id_name;
         $res->id_name = $request->input('id_name');
+        
+        // Update cat_link based on parent category
+        $oldParentCategoryId = $res->parent_category_id;
+        $newParentCategoryId = $request->input('parent_category_id', 0);
+        
+        if ($newParentCategoryId && $newParentCategoryId != 0) {
+            $parentCat = VideoCat::find($newParentCategoryId);
+            if ($parentCat) {
+                $res->cat_link = $parentCat->id_name . '/' . $res->id_name;
+            } else {
+                $res->cat_link = $res->id_name;
+            }
+        } else {
+            $res->cat_link = $res->id_name;
+        }
+        
         $res->canonical_link = $request->input('canonical_link');
         $res->seo_emp_id = $request->input('seo_emp_id');
         $res->meta_title = $request->input('meta_title');
@@ -326,16 +384,54 @@ class VideoCatController extends AppBaseController
 
         $res->app_id = $request->input('app_id');
         
-        // Handle JSON fields - don't double encode, model will handle it
-        if ($request->has('contents')) {
-            $contents = $request->input('contents');
-            // If it's a JSON string from form, decode it
-            $res->contents = is_string($contents) ? json_decode($contents, true) : $contents;
+        // Generate or use existing folder string
+        $fldrStr = $res->fldr_str;
+        if (!$fldrStr) {
+            $fldrStr = \App\Http\Controllers\HelperController::generateFolderID('');
+            $res->fldr_str = $fldrStr;
         }
-        if ($request->has('faqs')) {
-            $faqs = $request->input('faqs');
-            $res->faqs = is_string($faqs) ? json_decode($faqs, true) : $faqs;
+        
+        // Store old paths for cleanup
+        $oldContentPath = $res->contents ?? null;
+        $oldFaqPath = $res->faqs ?? null;
+        
+        // Handle contents - store as JSON file
+        if ($request->input('contents')) {
+            $contents = \App\Http\Controllers\Utils\ContentManager::getContents($request->input('contents'), $fldrStr);
+            $contentPath = 'ct/' . $fldrStr . '/jn/' . StorageUtils::getNewName() . ".json";
+            StorageUtils::put($contentPath, $contents);
+            $res->contents = $contentPath;
+            
+            // Delete old content file if exists and is different
+            if ($oldContentPath && $oldContentPath != $contentPath && !filter_var($oldContentPath, FILTER_VALIDATE_URL)) {
+                try {
+                    StorageUtils::delete($oldContentPath);
+                } catch (\Exception $e) {
+                    // Ignore if file doesn't exist
+                }
+            }
         }
+        
+        // Handle faqs - store as JSON file
+        if (isset($request->faqs)) {
+            $faqPath = 'ct/' . $fldrStr . '/fq/' . StorageUtils::getNewName() . ".json";
+            $faqs = [];
+            $faqs['title'] = $request->faqs_title ?? '';
+            $faqs['faqs'] = json_decode($request->faqs);
+            StorageUtils::put($faqPath, json_encode($faqs));
+            $res->faqs = $faqPath;
+            
+            // Delete old faq file if exists and is different
+            if ($oldFaqPath && $oldFaqPath != $faqPath && !filter_var($oldFaqPath, FILTER_VALIDATE_URL)) {
+                try {
+                    StorageUtils::delete($oldFaqPath);
+                } catch (\Exception $e) {
+                    // Ignore if file doesn't exist
+                }
+            }
+        }
+        
+        // Handle top_keywords - keep as JSON in database
         if ($request->has('top_keywords')) {
             $topKeywords = $request->input('top_keywords');
             $res->top_keywords = is_string($topKeywords) ? json_decode($topKeywords, true) : $topKeywords;
@@ -345,6 +441,11 @@ class VideoCatController extends AppBaseController
         $res->parent_category_id = $request->input('parent_category_id', 0);
         $res->status = $request->input('status');
         $res->save();
+        
+        // Update child categories' cat_link if id_name changed and this is a parent category
+        if ($oldIdName != $res->id_name && $res->parent_category_id == 0) {
+            $this->updateChildCatLink($res->id_name, $res->id);
+        }
 
         // AJAX response
         if ($request->ajax()) {
@@ -373,27 +474,40 @@ class VideoCatController extends AppBaseController
 
     public function imp_update(Request $request, $id)
     {
+        // Only Admin or SEO Manager can update IMP status
+        if (!\App\Http\Controllers\Utils\RoleManager::isAdminOrSeoManager(auth()->user()->user_type)) {
+            return response()->json([
+                'error' => "Ask admin or manager for changes"
+            ]);
+        }
+
         try {
             $res = VideoCat::findOrFail($id);
-            
-            // Check access
-            $accessCheck = $this->isAccessByRole("design", $res->id, $res->emp_id ?? null);
-            if ($accessCheck) {
-                return response()->json(['error' => $accessCheck], 403);
-            }
             
             // Toggle IMP status
             $res->imp = $res->imp == '1' ? '0' : '1';
             
             if ($res->save()) {
                 return response()->json([
-                    'success' => 'IMP status updated successfully.'
+                    'success' => 'done'
                 ]);
             } else {
                 return response()->json(['error' => 'Failed to save'], 500);
             }
         } catch (\Exception $e) {
             return response()->json(['error' => 'Data not found'], 404);
+        }
+    }
+    
+    /**
+     * Update cat_link for all child categories when parent id_name changes
+     */
+    private function updateChildCatLink($idName, $parentID)
+    {
+        $childCategories = VideoCat::where('parent_category_id', $parentID)->get();
+        foreach ($childCategories as $childCat) {
+            $childCat->cat_link = $idName . '/' . $childCat->id_name;
+            $childCat->save();
         }
     }
 }

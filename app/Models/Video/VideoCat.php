@@ -45,6 +45,7 @@ class VideoCat extends Model
     protected $fillable = [
         'category_name',
         'id_name',
+        'cat_link',
         'canonical_link',
         'seo_emp_id',
         'meta_title',
@@ -65,12 +66,11 @@ class VideoCat extends Model
         'parent_category_id',
         'sequence_number',
         'status',
-        'emp_id'
+        'emp_id',
+        'fldr_str'
     ];
 
     protected $casts = [
-        'contents' => 'array',
-        'faqs' => 'array',
         'top_keywords' => 'array',
     ];
 

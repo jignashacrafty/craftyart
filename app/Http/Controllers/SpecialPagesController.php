@@ -184,7 +184,7 @@ class SpecialPagesController extends AppBaseController
                 ]);
             }
         }
-
+        // Validation Error
         $base64Images = [...ContentManager::getBase64Contents($request->contents), ['img' => $request->hero_background_image, 'name' => "Hero Background Image", 'required' => $request->hero_bg_option == "image"], ['img' => $request->body_background_image, 'name' => "Body Background Image", 'required' => false], ['img' => $request->banner, 'name' => "Banner", 'required' => false]];
         $validationError = ContentManager::validateBase64Images($base64Images);
         if ($validationError) {

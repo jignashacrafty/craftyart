@@ -16,10 +16,9 @@ class Authenticate extends Middleware
     {
         if (! $request->expectsJson()) {
             return route('login');
-        } else {
-            if($request('is_admin') == 0) {
-                return 404;
-            }
         }
+        
+        // For API requests, return null (will throw 401 Unauthorized)
+        return null;
     }
 }

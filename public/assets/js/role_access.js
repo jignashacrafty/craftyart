@@ -1,12 +1,12 @@
 const roleAccessMap = {
   Admin: {
     isAccess: true,
-    accessClass: ["all", "filter-access", "accept-reject-btn",'parent_cat_access'],
+    accessClass: ["all", "filter-access", "accept-reject-btn", 'parent_cat_access'],
     exceptionClass: ["preview-mode"],
   },
   Manager: {
     isAccess: true,
-    accessClass: ["all", "filter-access", "accept-reject-btn","parent_cat_access"],
+    accessClass: ["all", "filter-access", "accept-reject-btn", "parent_cat_access"],
     exceptionClass: ["preview-mode"],
   },
   "SEO Manager": {
@@ -97,7 +97,7 @@ function hideLoadingScreen() {
   const loadingScreen = document.getElementById("main_loading_screen");
   if (loadingScreen) {
     loadingScreen.style.display = "none";
-  } 
+  }
 
   const tagsInputContainer = document.querySelector(".bootstrap-tagsinput");
   if (tagsInputContainer) {

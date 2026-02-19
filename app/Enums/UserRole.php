@@ -17,7 +17,7 @@ enum UserRole : string
      * Return ID from enum case
      */
     public function id(): int
-    {
+    {   
         return match($this) {
             self::ADMIN => 1,
             self::MANAGER => 2,

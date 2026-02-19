@@ -189,7 +189,7 @@ class OrderUserController extends AppBaseController
                     ->from('orders')
                     ->where('is_deleted', 0)
                     ->whereIn('status', ['failed', 'pending'])
-                    ->groupBy('user_id', 'plan_id');
+                    ->groupBy('user_id');
             });
         }
 
@@ -315,18 +315,15 @@ class OrderUserController extends AppBaseController
         // Check authorization
         $isSalesUser = RoleManager::isSalesEmployee($currentUser->user_type);
         $isAdminOrManager = RoleManager::isAdmin($currentUser->user_type) || 
-                           RoleManager::isManager($currentUser->user_type);
+                           RoleManager::isManager($currentUser->user_type) ||
+                           RoleManager::isSalesManager($currentUser->user_type);
         
-        // Admin/Manager cannot update followup
+        // Admin, Manager, and Sales Manager can always update followup
         if ($isAdminOrManager) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Admin/Manager can only view followup. Only assigned Sales user can update.'
-            ], 403);
+            // Allow update
         }
-        
         // Sales user can only update if order is not assigned or assigned to them
-        if ($isSalesUser) {
+        elseif ($isSalesUser) {
             if (!empty($orderUser->emp_id) && $orderUser->emp_id != 0 && $orderUser->emp_id != $currentUser->id) {
                 return response()->json([
                     'success' => false,
@@ -355,22 +352,6 @@ class OrderUserController extends AppBaseController
         $orderUser->emp_id = $currentUser->id;
 
         $orderUser->save();
-        
-        // Update uses_type in personal_details if provided
-        if ($request->has('uses_type') && !empty($request->uses_type) && !empty($orderUser->user_id)) {
-            $personalDetails = PersonalDetails::where('uid', $orderUser->user_id)->first();
-            
-            if ($personalDetails) {
-                $personalDetails->usage = $request->uses_type;
-                $personalDetails->save();
-            } else {
-                // Create new personal details record if doesn't exist
-                PersonalDetails::create([
-                    'uid' => $orderUser->user_id,
-                    'usage' => $request->uses_type,
-                ]);
-            }
-        }
 
         // Broadcast followup change via WebSocket for real-time updates
         WebSocketBroadcastController::broadcastOrderFollowUpChanged($orderUser);
@@ -689,6 +670,156 @@ class OrderUserController extends AppBaseController
         }
     }
     
+    /**
+     * Add transaction manually
+     */
+    public function addTransactionManually(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'email' => 'required|email',
+                'contact' => 'required|string|max:15',
+                'method' => 'required|string',
+                'transaction_id' => 'required|string',
+                'currency_code' => 'required|string|in:INR,USD',
+                'price_amount' => 'required|numeric|min:0',
+                'paid_amount' => 'required|numeric|min:0',
+                'plan_id' => 'required|integer',
+                'usage_purpose' => 'required|in:personal,professional',
+                'fromWallet' => 'nullable|boolean',
+                'fromWhere' => 'nullable|string',
+                'coins' => 'nullable|integer|min:0',
+            ]);
+
+            // Find user by email
+            $user = UserData::where('email', $validated['email'])->first();
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not found with this email'
+                ], 404);
+            }
+
+            // Check if user is active
+            if ($user->status == 0 && $user->status !== null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User account is inactive'
+                ], 400);
+            }
+
+            // Get plan details
+            $plan = Subscription::find($validated['plan_id']);
+            if (!$plan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Plan not found'
+                ], 404);
+            }
+
+            // Check if transaction already exists
+            $existingTransaction = TransactionLog::where('transaction_id', $validated['transaction_id'])->first();
+            if ($existingTransaction) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Transaction ID already exists'
+                ], 400);
+            }
+
+            // Create transaction log (same as panel)
+            $transactionLog = new TransactionLog();
+            $transactionLog->plan_id = $validated['plan_id'];
+            $transactionLog->user_id = $user->uid; // Use uid, not id
+            $transactionLog->payment_method = $validated['method'];
+            $transactionLog->from_where = $validated['fromWhere'] ?? 'Manual';
+            $transactionLog->transaction_id = $validated['transaction_id'];
+            $transactionLog->promo_code_id = 0;
+            
+            // Set default values for required fields
+            $transactionLog->cancellation_reason = '';
+            $transactionLog->url = '';
+            $transactionLog->subscription_status = '';
+            $transactionLog->followup_note = '';
+            $transactionLog->type = 0; // Old plan type
+            $transactionLog->payment_status = 1; // Success
+            $transactionLog->emp_id = auth()->user()->id ?? 0;
+            $transactionLog->by_sales_team = 1;
+            $transactionLog->subscription_is_active = 1;
+            $transactionLog->is_trial = 0;
+            $transactionLog->is_e_mandate = 0;
+            $transactionLog->yearly = 0;
+            $transactionLog->email_template_count = 0;
+            $transactionLog->whatsapp_template_count = 0;
+            $transactionLog->followup_call = 0;
+
+            // Set currency and price
+            if (!strcasecmp($validated['currency_code'], "INR")) {
+                $transactionLog->currency_code = "Rs";
+                $transactionLog->price_amount = $plan->price;
+            } else {
+                $transactionLog->currency_code = "$";
+                $transactionLog->price_amount = $plan->price_dollar;
+            }
+
+            $transactionLog->paid_amount = $validated['paid_amount'];
+            $transactionLog->net_amount = $validated['paid_amount'];
+            $transactionLog->coins = $validated['coins'] ?? 0;
+            $transactionLog->isManual = 1;
+
+            // Deactivate old subscriptions
+            TransactionLog::where('user_id', $user->uid)->update(['status' => 0]);
+
+            // Set validity and expiry
+            $transactionLog->validity = $plan->validity;
+            $expiryDate = now()->addDays($plan->validity);
+            $transactionLog->expired_at = $expiryDate;
+            $transactionLog->save();
+
+            // Update user premium status
+            $user->is_premium = "1";
+            $user->save();
+
+            // Update personal details with usage purpose
+            PersonalDetails::updateOrCreate(
+                ['uid' => $user->uid], // Use uid
+                ['usage' => $validated['usage_purpose']]
+            );
+
+            \Log::info('Manual transaction added successfully', [
+                'transaction_log_id' => $transactionLog->id,
+                'user_id' => $user->id,
+                'user_uid' => $user->uid,
+                'email' => $validated['email'],
+                'amount' => $validated['paid_amount'],
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transaction added successfully',
+                'data' => [
+                    'transaction_log_id' => $transactionLog->id,
+                    'user_id' => $user->id,
+                    'transaction_id' => $validated['transaction_id'],
+                    'amount' => $validated['paid_amount'],
+                    'plan_name' => $plan->package_name ?? 'Subscription',
+                    'expiry_date' => $expiryDate->format('Y-m-d H:i:s'),
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Add Transaction Manually Error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error adding transaction: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     /**
      * Create payment link
      */

@@ -376,6 +376,25 @@
                         </div>
                     </div>
 
+                    <div class="row">
+                        <div class="col-md-3 col-sm-12">
+                            <div class="form-group">
+                                <h6>No Index</h6>
+                                <select class="selectpicker form-control" data-style="btn-outline-primary"
+                                    name="no_index">
+                                    @if (($dataArray['item']->no_index ?? 1) == '1')
+                                        <option value="1" selected>TRUE</option>
+                                        <option value="0">FALSE</option>
+                                    @else
+                                        <option value="1">TRUE</option>
+                                        <option value="0" selected>FALSE</option>
+                                    @endif
+                                </select>
+                                <small class="text-muted">TRUE = noindex (not indexed by search engines)</small>
+                            </div>
+                        </div>
+                    </div>
+
                     <br>
                     <div class="section-header">SEO Fields</div>
                     <div class="row">

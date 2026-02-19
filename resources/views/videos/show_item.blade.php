@@ -166,7 +166,7 @@
  </style>
  
  <div class="main-container">
-     <div class="video-items-container">
+     <div class="video-items-container ">
          <div class="items-card">
              <div class="items-header">
                  <div class="row align-items-center mb-3">
@@ -175,9 +175,11 @@
                          <p class="text-muted mb-0" style="font-size: 14px;">Manage your video template items</p>
                      </div>
                      <div class="col-md-6 text-right">
+                        @if ($roleManager::isAdminOrSeoManager(Auth::user()->user_type))
                          <button class="btn btn-add-new" onclick="appSelection()">
                              <i class="fa fa-plus mr-2"></i>Add New Item
                          </button>
+                        @endif
                      </div>
                  </div>
                  
@@ -211,10 +213,9 @@
                  </div>
              </div>
 
-             <form id="create_item_action" action="create_v_item" method="POST" enctype="multipart/form-data"
+             <form id="create_item_action" action="create_v_item" method="GET"
                  style="display: none;">
                  <input type="text" id="passingAppId" name="passingAppId">
-                 @csrf
              </form>
 
              <div class="items-table-wrapper">
@@ -232,6 +233,7 @@
                                  <th style="width: 100px;">Purchases</th>
                              @endif
                              <th style="width: 100px;">Premium</th>
+                             <th style="width: 100px;">No Index</th>
                              <th style="width: 100px;">Status</th>
                              <th style="width: 80px; text-align: center;">Actions</th>
                          </tr>
@@ -265,6 +267,27 @@
                                          <span class="status-badge free-badge">Free</span>
                                      @endif
                                  </td>
+                                 @if ($roleManager::isAdminOrSeoManager(Auth::user()->user_type))
+                                     @if ($item->no_index == '1')
+                                         <td><label id="noindex_label_{{ $item->id }}"
+                                                 style="display: none;">TRUE</label><Button style="border: none"
+                                                 onclick="noindex_click(this, '{{ $item->id }}')"><input
+                                                     type="checkbox" checked class="switch-btn" data-size="small"
+                                                     data-color="#0059b2" /></Button></td>
+                                     @else
+                                         <td><label id="noindex_label_{{ $item->id }}"
+                                                 style="display: none;">FALSE</label><Button style="border: none"
+                                                 onclick="noindex_click(this, '{{ $item->id }}')"><input
+                                                     type="checkbox" class="switch-btn" data-size="small"
+                                                     data-color="#0059b2" /></Button></td>
+                                     @endif
+                                 @else
+                                     @if ($item->no_index == '1')
+                                         <td><span class="status-badge status-live">True</span></td>
+                                     @else
+                                         <td><span class="status-badge status-not-live">False</span></td>
+                                     @endif
+                                 @endif
                                  <td>
                                      @if ($item->status == '1')
                                          <span class="status-badge status-live">Live</span>
@@ -278,9 +301,11 @@
                                              <i class="dw dw-more"></i>
                                          </a>
                                          <div class="dropdown-menu dropdown-menu-right dropdown-menu-icon-list">
+                                             @if ($roleManager::isAdminOrSeoManager(Auth::user()->user_type))
                                              <a class="dropdown-item" href="edit_v_item/{{ $item->id }}">
                                                  <i class="dw dw-edit2"></i> Edit
                                              </a>
+                                             @endif
                                              <a class="dropdown-item" href="edit_seo_v_item/{{ $item->id }}">
                                                  <i class="dw dw-file"></i> Edit SEO Data
                                              </a>
@@ -371,6 +396,43 @@
              contentType: false,
              processData: false
          })
+     }
+
+     function noindex_click(parentElement, $id) {
+         let element = parentElement.firstElementChild;
+         const originalChecked = element.checked;
+
+         $.ajaxSetup({
+             headers: {
+                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+             }
+         });
+
+         $.ajax({
+             url: "{{ route('v_item.noindex', ':id') }}".replace(':id', $id),
+             type: 'POST',
+             success: function(data) {
+                 if (data.success) {
+                     var x = document.getElementById("noindex_label_" + $id);
+                     if (x.innerHTML === "TRUE") {
+                         x.innerHTML = "FALSE";
+                     } else {
+                         x.innerHTML = "TRUE";
+                     }
+                 } else if (data.error) {
+                     alert(data.error);
+                     element.checked = originalChecked;
+                 }
+             },
+             error: function(xhr) {
+                 if (xhr.responseJSON && xhr.responseJSON.error) {
+                     alert(xhr.responseJSON.error);
+                 } else {
+                     alert('An error occurred while updating No Index status');
+                 }
+                 element.checked = originalChecked;
+             }
+         });
      }
 
      function appSelection() {
