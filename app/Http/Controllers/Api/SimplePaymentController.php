@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\PaymentConfiguration;
+use App\Models\Pricing\PaymentConfiguration;
 use App\Models\Sale;
 use App\Services\PhonePeTokenService;
 use Illuminate\Http\Request;

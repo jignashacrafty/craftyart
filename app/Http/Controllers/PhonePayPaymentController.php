@@ -17,7 +17,7 @@ use PhonePe\payments\v1\PhonePePaymentClient;
 
 class PhonePayPaymentController extends AppBaseController
 {
-//    public $clientId = 'TEST-M22EOXLUSO1LA_25042';
+    //    public $clientId = 'TEST-M22EOXLUSO1LA_25042';
 //    public $clientSecret = 'YzhhMmRiYmEtYjg0ZS00YTMwLWEyOGQtNmU3YzVhMzc5ZTc1';
 //    public $clientVersion = '1';
 //    public $saltKey = '96434309-7796-489d-8924-ab56988a6076';
@@ -75,10 +75,11 @@ class PhonePayPaymentController extends AppBaseController
 
 
 
-    public function index() {
+    public function index()
+    {
 
 
-//        $merchantTransactionID = bin2hex(random_bytes(7)) . Carbon::now()->timestamp;
+        //        $merchantTransactionID = bin2hex(random_bytes(7)) . Carbon::now()->timestamp;
 //        $request = PgPayRequestBuilder::builder()
 //            ->callbackUrl(route('checkstatus', ['id' => $merchantTransactionID]))
 //            ->merchantId($this->clientId)
@@ -92,9 +93,9 @@ class PhonePayPaymentController extends AppBaseController
 //        try {
 //            $response = $this->phonePePaymentsClient->pay($request);
 //            $pagPageUrl = $response->getInstrumentResponse()->getRedirectInfo()->getUrl();
-            return view('email/welcome',);
+        return view('email/welcome', );
 
-//        } catch (\Exception $e) {
+        //        } catch (\Exception $e) {
 //            return back()->with('error', 'Payment initiation failed: ' . $e->getMessage());
 //        }
     }
@@ -114,17 +115,17 @@ class PhonePayPaymentController extends AppBaseController
     public function checkstatus($id)
     {
 
-//        dd("Response",$id ,"--");
+        //        dd("Response",$id ,"--");
 
-        $merchantId =$id;
+        $merchantId = $id;
         $checkStatus = $this->phonePePaymentsClient->statusCheck($merchantId);
 
-//        $checkStatus->getResponseCode();
+        //        $checkStatus->getResponseCode();
 //        $checkStatus->getState();
 //        $checkStatus->getTransactionId();
         dd($checkStatus);
 
-//        $transactionId = $request->input('transactionId');
+        //        $transactionId = $request->input('transactionId');
 //
 //        $verifyString = '/pg/v1/status/' . $merchantId . '/' . $transactionId . $this->saltKey;
 //        $verifyHeader = hash('sha256', $verifyString) . '###' . $this->saltIndex;

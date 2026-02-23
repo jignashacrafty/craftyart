@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\PhonePeToken;
-use App\Models\PaymentConfiguration;
+use App\Models\Pricing\PaymentConfiguration;
 use App\Enums\PaymentGatewayEnum;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -16,19 +16,18 @@ class PhonePeTokenService
     protected $clientSecret;
     protected $clientVersion;
     protected $production;
-    
+
     public function __construct()
     {
         $config = PaymentConfiguration::whereGateway(PaymentGatewayEnum::PHONEPE->value)
-            ->where('is_active', 1)
             ->first();
-            
+
         if ($config) {
             $credentials = $config->credentials;
             $this->clientId = $credentials['client_id'] ?? '';
             $this->clientSecret = $credentials['client_secret'] ?? '';
             $this->clientVersion = $credentials['client_version'] ?? '';
-            
+
             // Get environment setting
             if (isset($credentials['environment'])) {
                 $this->production = ($credentials['environment'] === 'production');
@@ -37,7 +36,7 @@ class PhonePeTokenService
             }
         }
     }
-    
+
     /**
      * Get or generate access token with caching
      */
@@ -49,25 +48,25 @@ class PhonePeTokenService
             Log::info('✅ Using cached PhonePe token');
             return $cachedToken;
         }
-        
+
         // Check database for valid token
         $tokenRecord = PhonePeToken::getActiveToken();
         if ($tokenRecord && !$tokenRecord->isExpiringSoon()) {
             $cacheMinutes = now()->diffInMinutes($tokenRecord->expires_at) - 5;
             Cache::put('phonepe_access_token', $tokenRecord->access_token, $cacheMinutes * 60);
-            
+
             Log::info('✅ Using database PhonePe token', [
                 'token_id' => $tokenRecord->id,
                 'expires_at' => $tokenRecord->expires_at
             ]);
-            
+
             return $tokenRecord->access_token;
         }
-        
+
         // Generate new token
         return $this->generateNewToken();
     }
-    
+
     /**
      * Generate new access token
      */
@@ -77,34 +76,34 @@ class PhonePeTokenService
         $url = $this->production
             ? 'https://api.phonepe.com/apis/identity-manager/v1/oauth/token'
             : 'https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token';
-        
+
         try {
             Log::info('🔄 Generating new PhonePe access token', [
                 'environment' => $this->production ? 'production' : 'sandbox',
                 'url' => $url
             ]);
-            
+
             $response = Http::asForm()->post($url, [
                 'client_id' => $this->clientId,
                 'client_secret' => $this->clientSecret,
                 'client_version' => $this->clientVersion,
                 'grant_type' => 'client_credentials',
             ]);
-            
+
             $data = $response->json();
-            
+
             if (!isset($data['access_token'])) {
                 Log::error('❌ PhonePe OAuth failed', ['response' => $data]);
                 throw new \Exception('PhonePe OAuth failed: ' . json_encode($data));
             }
-            
+
             $accessToken = $data['access_token'];
             $expiresIn = $data['expires_in'] ?? 3600;
             $expiresAt = now()->addSeconds($expiresIn);
-            
+
             // Mark old tokens as expired
             PhonePeToken::where('status', 'active')->update(['status' => 'expired']);
-            
+
             // Create new token record
             $tokenRecord = PhonePeToken::create([
                 'access_token' => $accessToken,
@@ -114,18 +113,18 @@ class PhonePeTokenService
                 'status' => 'active',
                 'metadata' => $data
             ]);
-            
+
             // Cache token
             $cacheMinutes = $expiresIn / 60 - 5;
             Cache::put('phonepe_access_token', $accessToken, $cacheMinutes * 60);
-            
+
             Log::info('✅ New PhonePe token generated', [
                 'token_id' => $tokenRecord->id,
                 'expires_at' => $expiresAt
             ]);
-            
+
             return $accessToken;
-            
+
         } catch (\Exception $e) {
             Log::error('❌ PhonePe token generation failed', [
                 'error' => $e->getMessage()
@@ -133,7 +132,7 @@ class PhonePeTokenService
             throw $e;
         }
     }
-    
+
     /**
      * Refresh token manually
      */

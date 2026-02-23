@@ -113,6 +113,11 @@ class UserData extends Authenticatable
         return $this->hasMany(TransactionLog::class, 'user_id', 'uid');
     }
 
+    public function latestTransactionLog()
+    {
+        return $this->hasOne(TransactionLog::class, 'user_id', 'uid')->latest();
+    }
+
     public function getReviews()
     {
         return $this->hasMany(Review::class, 'user_id', 'uid');
@@ -126,5 +131,10 @@ class UserData extends Authenticatable
     public function videPurchaseLogs()
     {
         return $this->hasMany(VideoPurchaseHistory::class, 'user_id', 'uid');
+    }
+
+    public function personalDetails()
+    {
+        return $this->hasOne(PersonalDetails::class, 'uid', 'uid');
     }
 }

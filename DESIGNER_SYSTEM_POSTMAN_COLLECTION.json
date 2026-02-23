@@ -29,6 +29,354 @@
   ],
   "item": [
     {
+      "name": "🔐 Authentication",
+      "description": "Login and get JWT token for protected APIs",
+      "item": [
+        {
+          "name": "Admin Login (Simple - No Device ID)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Automatically save token to environment variable",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    if (jsonData.token) {",
+                  "        pm.environment.set(\"auth_token\", jsonData.token);",
+                  "        console.log(\"✅ Token saved:\", jsonData.token);",
+                  "        ",
+                  "        pm.environment.set(\"user_id\", jsonData.user.id);",
+                  "        pm.environment.set(\"user_name\", jsonData.user.name);",
+                  "        pm.environment.set(\"user_type\", jsonData.user.user_type);",
+                  "        ",
+                  "        pm.test(\"Login successful\", function () {",
+                  "            pm.expect(jsonData.success).to.be.true;",
+                  "        });",
+                  "    }",
+                  "} else {",
+                  "    pm.test(\"Login failed\", function () {",
+                  "        pm.expect.fail(\"Login failed with status: \" + pm.response.code);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/login?showDecoded=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "login"
+              ],
+              "query": [
+                {
+                  "key": "showDecoded",
+                  "value": "1",
+                  "description": "Get unencrypted response for testing"
+                }
+              ]
+            },
+            "description": "Simple login for admin/designer head users. No device_id required.\n\nResponse is encrypted by default. Add ?showDecoded=1 to get plain JSON for testing.\n\nToken is automatically saved to {{auth_token}} variable."
+          },
+          "response": [
+            {
+              "name": "Success Response (Decoded)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"123456\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/admin/login?showDecoded=1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "login"
+                  ],
+                  "query": [
+                    {
+                      "key": "showDecoded",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Login successful\",\n  \"token\": \"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBnbWFpbC5jb20iLCJ1c2VyX3R5cGUiOjEsIm5hbWUiOiJBZG1pbiBVc2VyIiwiaWF0IjoxNzA5NTUwMDAwLCJleHAiOjE3MTIxNDIwMDB9.signature\",\n  \"user\": {\n    \"id\": 1,\n    \"name\": \"Admin User\",\n    \"email\": \"admin@gmail.com\",\n    \"user_type\": 1,\n    \"status\": 1\n  }\n}"
+            },
+            {
+              "name": "Success Response (Encrypted)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"123456\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/admin/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "login"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "\"{\\\"c\\\":\\\"U2FsdGVkX1+base64_encrypted_content_here...\\\",\\\"i\\\":\\\"hex_iv_here...\\\",\\\"s\\\":\\\"hex_salt_here...\\\"}\""
+            },
+            {
+              "name": "Invalid Password",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"wrongpassword\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/admin/login?showDecoded=1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "login"
+                  ],
+                  "query": [
+                    {
+                      "key": "showDecoded",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 401,\n  \"success\": false,\n  \"msg\": \"Incorrect password\"\n}"
+            },
+            {
+              "name": "Email Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"notfound@gmail.com\",\n  \"password\": \"123456\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/admin/login?showDecoded=1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "login"
+                  ],
+                  "query": [
+                    {
+                      "key": "showDecoded",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 401,\n  \"success\": false,\n  \"msg\": \"Email is not registered\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Current User Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "me"
+              ]
+            },
+            "description": "Get current authenticated user information"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "logout"
+              ]
+            },
+            "description": "Logout (JWT tokens are stateless, just remove token from client)"
+          }
+        },
+        {
+          "name": "Login (With Device ID - For Mobile Apps)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Automatically save token to environment variable",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    if (jsonData.token) {",
+                  "        pm.environment.set(\"auth_token\", jsonData.token);",
+                  "        console.log(\"✅ Token saved:\", jsonData.token);",
+                  "        ",
+                  "        pm.environment.set(\"user_id\", jsonData.uid);",
+                  "        pm.environment.set(\"user_name\", jsonData.name);",
+                  "        ",
+                  "        pm.test(\"Login successful\", function () {",
+                  "            pm.expect(jsonData.success).to.be.true;",
+                  "        });",
+                  "    }",
+                  "} else {",
+                  "    pm.test(\"Login failed\", function () {",
+                  "        pm.expect.fail(\"Login failed with status: \" + pm.response.code);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate unique device ID",
+                  "pm.environment.set(\"device_id\", \"postman-\" + Date.now());"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password\",\n  \"device_id\": \"{{device_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login with device tracking (for mobile apps). Requires device_id for session management."
+          }
+        }
+      ]
+    },
+    {
       "name": "0. Enrollment Metadata APIs (Public)",
       "description": "APIs to fetch designer types, categories, and goals for enrollment form",
       "item": [
@@ -321,11 +669,11 @@
                 "check-status"
               ]
             },
-            "description": "Check application status with enrollment fields"
+            "description": "Check application status with enrollment fields and rejection reason if rejected"
           },
           "response": [
             {
-              "name": "Success Response",
+              "name": "Success Response - Pending",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -358,7 +706,79 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Application found\",\n  \"application_id\": 54,\n  \"name\": \"Test Designer\",\n  \"email\": \"designer@test.com\",\n  \"phone\": \"9876543210\",\n  \"city\": \"Ahmedabad\",\n  \"state\": \"Gujarat\",\n  \"country\": \"India\",\n  \"experience\": \"3 years of graphic design experience\",\n  \"experience_level\": \"mid-level\",\n  \"skills\": \"Photoshop, Illustrator, Figma\",\n  \"portfolio_links\": [\n    \"https://behance.net/testdesigner\",\n    \"https://dribbble.com/testdesigner\"\n  ],\n  \"selected_types\": [1, 2, 7],\n  \"selected_categories\": [1, 2, 5],\n  \"selected_goals\": [1, 4, 8],\n  \"status\": \"pending\",\n  \"submitted_at\": \"2026-02-14T12:07:47.000000Z\",\n  \"reviewed_at\": null,\n  \"rejection_reason\": null\n}"
+              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Your application is under review. We will get back to you soon.\",\n  \"application_id\": 54,\n  \"name\": \"Test Designer\",\n  \"email\": \"designer@test.com\",\n  \"phone\": \"9876543210\",\n  \"city\": \"Ahmedabad\",\n  \"state\": \"Gujarat\",\n  \"country\": \"India\",\n  \"experience\": \"3 years of graphic design experience\",\n  \"experience_level\": \"mid-level\",\n  \"skills\": \"Photoshop, Illustrator, Figma\",\n  \"portfolio_links\": [\n    \"https://behance.net/testdesigner\",\n    \"https://dribbble.com/testdesigner\"\n  ],\n  \"selected_types\": [1, 2, 7],\n  \"selected_categories\": [1, 2, 5],\n  \"selected_goals\": [1, 4, 8],\n  \"status\": \"pending\",\n  \"submitted_at\": \"2026-02-14T12:07:47.000000Z\",\n  \"reviewed_at\": null,\n  \"reviewed_by\": null,\n  \"rejection_reason\": null,\n  \"can_reapply\": false\n}"
+            },
+            {
+              "name": "Success Response - Rejected",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"rejected@test.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/designer/check-status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "designer",
+                    "check-status"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Your application was not approved. You can submit a new application.\",\n  \"application_id\": 55,\n  \"name\": \"Test Designer\",\n  \"email\": \"rejected@test.com\",\n  \"phone\": \"9876543210\",\n  \"city\": \"Ahmedabad\",\n  \"state\": \"Gujarat\",\n  \"country\": \"India\",\n  \"experience\": \"2 years of graphic design experience\",\n  \"experience_level\": \"entry-level\",\n  \"skills\": \"Photoshop, Canva\",\n  \"portfolio_links\": [\n    \"https://behance.net/testdesigner\"\n  ],\n  \"selected_types\": [1, 2],\n  \"selected_categories\": [1, 2],\n  \"selected_goals\": [1, 2],\n  \"status\": \"rejected\",\n  \"submitted_at\": \"2026-02-14T10:30:00.000000Z\",\n  \"reviewed_at\": \"2026-02-14T15:45:00.000000Z\",\n  \"reviewed_by\": \"Admin User\",\n  \"rejection_reason\": \"Portfolio does not meet our quality standards. We recommend gaining more experience and improving your design skills before reapplying.\",\n  \"can_reapply\": true\n}"
+            },
+            {
+              "name": "Success Response - Approved",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"approved@test.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/designer/check-status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "designer",
+                    "check-status"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Congratulations! Your application has been approved.\",\n  \"application_id\": 56,\n  \"name\": \"Test Designer\",\n  \"email\": \"approved@test.com\",\n  \"phone\": \"9876543210\",\n  \"city\": \"Ahmedabad\",\n  \"state\": \"Gujarat\",\n  \"country\": \"India\",\n  \"experience\": \"5 years of graphic design experience\",\n  \"experience_level\": \"senior\",\n  \"skills\": \"Photoshop, Illustrator, Figma, After Effects\",\n  \"portfolio_links\": [\n    \"https://behance.net/testdesigner\",\n    \"https://dribbble.com/testdesigner\"\n  ],\n  \"selected_types\": [1, 2, 7],\n  \"selected_categories\": [1, 2, 5],\n  \"selected_goals\": [1, 4, 8],\n  \"status\": \"approved\",\n  \"submitted_at\": \"2026-02-14T09:00:00.000000Z\",\n  \"reviewed_at\": \"2026-02-14T14:30:00.000000Z\",\n  \"reviewed_by\": \"Admin User\",\n  \"rejection_reason\": null,\n  \"can_reapply\": false\n}"
             }
           ]
         }
@@ -492,7 +912,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"rejection_reason\": \"Portfolio does not meet our quality standards\"\n}"
+              "raw": "{\n  \"rejection_reason\": \"Portfolio does not meet our quality standards. We recommend gaining more experience and improving your design skills before reapplying.\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/designer-head/application/{{application_id}}/reject",
@@ -505,8 +925,95 @@
                 "{{application_id}}",
                 "reject"
               ]
+            },
+            "description": "Reject designer application with a detailed reason (minimum 10 characters required)"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"rejection_reason\": \"Portfolio does not meet our quality standards. We recommend gaining more experience and improving your design skills before reapplying.\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/designer-head/application/1/reject",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "designer-head",
+                    "application",
+                    "1",
+                    "reject"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Application rejected successfully\",\n  \"data\": {\n    \"application_id\": 1,\n    \"status\": \"rejected\",\n    \"rejection_reason\": \"Portfolio does not meet our quality standards. We recommend gaining more experience and improving your design skills before reapplying.\",\n    \"reviewed_by\": \"Admin User\",\n    \"reviewed_at\": \"2026-02-21T10:30:00.000000Z\"\n  }\n}"
+            },
+            {
+              "name": "Validation Error - Reason Too Short",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"rejection_reason\": \"Bad\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/designer-head/application/1/reject",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "designer-head",
+                    "application",
+                    "1",
+                    "reject"
+                  ]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": {\n    \"rejection_reason\": [\n      \"The rejection reason must be at least 10 characters.\"\n    ]\n  }\n}"
             }
-          }
+          ]
         },
         {
           "name": "Get Design Submissions",
@@ -607,6 +1114,42 @@
       "item": [
         {
           "name": "Get Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test response",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    pm.test(\"Profile retrieved successfully\", function () {",
+                  "        pm.expect(jsonData.success).to.be.true;",
+                  "        pm.expect(jsonData.profile).to.exist;",
+                  "    });",
+                  "    ",
+                  "    // Check profile type",
+                  "    if (jsonData.profile.type === 'approved_designer') {",
+                  "        console.log(\"✅ Approved Designer Profile\");",
+                  "        pm.expect(jsonData.stats).to.exist;",
+                  "        pm.expect(jsonData.wallet).to.exist;",
+                  "    } else if (jsonData.profile.type === 'creator') {",
+                  "        console.log(\"✅ Creator Profile\");",
+                  "        pm.expect(jsonData.profile.is_creator).to.be.true;",
+                  "        pm.expect(jsonData.message).to.exist;",
+                  "    }",
+                  "} else if (pm.response.code === 404) {",
+                  "    console.log(\"ℹ️ User is not a designer or creator\");",
+                  "} else {",
+                  "    pm.test(\"Request failed\", function () {",
+                  "        pm.expect.fail(\"Request failed with status: \" + pm.response.code);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -616,15 +1159,23 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/designer/profile",
+              "raw": "{{base_url}}/designer/profile?showDecoded=1",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "designer",
                 "profile"
+              ],
+              "query": [
+                {
+                  "key": "showDecoded",
+                  "value": "1",
+                  "description": "Get unencrypted response for testing"
+                }
               ]
-            }
+            },
+            "description": "Get designer profile information.\n\nSupports 3 user types:\n1. **Approved Designer** - Has designer_profile record, returns full profile with wallet\n2. **Creator** - Has creator=1 in user_data table, returns basic profile with message\n3. **Regular User** - Returns 404 with message to apply\n\nResponse is encrypted by default. Add ?showDecoded=1 to get plain JSON for testing."
           }
         },
         {

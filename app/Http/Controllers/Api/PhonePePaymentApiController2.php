@@ -6,7 +6,7 @@ use App\Enums\PaymentGatewayEnum;
 use App\Http\Controllers\AiCreditController;
 use App\Models\Attire;
 use App\Models\Design;
-use App\Models\PaymentConfiguration;
+use App\Models\Pricing\PaymentConfiguration;
 use App\Models\PhonepeWebhook;
 use App\Models\Pricing\SubPlan;
 use App\Models\PurchaseHistory;

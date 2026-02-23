@@ -163,12 +163,13 @@ class DesignerHeadController extends Controller
     public function rejectApplication(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'rejection_reason' => 'required|string',
+            'rejection_reason' => 'required|string|min:10',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
+                'message' => 'Validation failed',
                 'errors' => $validator->errors()
             ], 422);
         }
@@ -198,7 +199,14 @@ class DesignerHeadController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Application rejected successfully'
+            'message' => 'Application rejected successfully',
+            'data' => [
+                'application_id' => $application->id,
+                'status' => 'rejected',
+                'rejection_reason' => $application->rejection_reason,
+                'reviewed_by' => Auth::user()->name,
+                'reviewed_at' => $application->reviewed_at->toISOString(),
+            ]
         ]);
     }
 

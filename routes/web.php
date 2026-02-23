@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AI\AiCreditTransactionController;
 use App\Http\Controllers\AiCreditController;
+use App\Http\Controllers\BusinessSupportController;
 use App\Http\Controllers\Api\DownloadController;
 use App\Http\Controllers\AppCategoryController;
 use App\Http\Controllers\AudioCategoryController;
@@ -50,7 +51,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OfferPopUpController;
 use App\Http\Controllers\OrderUserController;
 use App\Http\Controllers\PageSlugHistoryController;
-use App\Http\Controllers\PaymentConfigController;
+use App\Http\Controllers\Pricing\PaymentConfigController;
 use App\Http\Controllers\PendingTaskController;
 use App\Http\Controllers\PhonePeAutoPayTestController;
 use App\Http\Controllers\PlanMetaDetailsController;
@@ -230,9 +231,9 @@ Route::post('submit_editable_mode', [EditableModesController::class, 'store']);
 Route::post('update_editable_mode/{id}', [EditableModesController::class, 'update'])->name('editable_mode.update');
 Route::post('delete_editable_mode/{id}', [EditableModesController::class, 'delete'])->name('editable_mode.delete');
 
-Route::get('show_attire_item', [AttireController::class,'show'])->name('show_attire_item');
-Route::post('create_attire', [AttireController::class,'store'])->name('create_attire');
-Route::get('add_attire', [AttireController::class,'add'])->name('add_attire');
+Route::get('show_attire_item', [AttireController::class, 'show'])->name('show_attire_item');
+Route::post('create_attire', [AttireController::class, 'store'])->name('create_attire');
+Route::get('add_attire', [AttireController::class, 'add'])->name('add_attire');
 Route::get('edit_seo_attire/{id}', [AttireController::class, 'edit_seo'])->name('edit_seo_attire');
 Route::post('update_seo_attire/{id}', [AttireController::class, 'update_seo'])->name('update_seo_attire');
 Route::post('update_caricature_category', [AttireController::class, 'updateCategory'])->name('update_caricature_category');
@@ -363,6 +364,8 @@ Route::get('transcation_logs', [SubscriptionController::class, 'showTranscation'
 Route::get('purchases', [SubscriptionController::class, 'showPurchases'])->name('purchases')->middleware(IsAdmin::class);
 
 Route::get('credit_transaction_logs', [AiCreditTransactionController::class, 'index'])->name('credit_transaction_logs')->middleware(IsAdmin::class);
+Route::get('business_support_purchases', [BusinessSupportController::class, 'showBusinessSupport'])->name('business_support_purchases')->middleware(IsSalesManagerAccess::class);
+Route::post('business_support_purchases/followup', [BusinessSupportController::class, 'updateFollowup'])->name('business_support.followup')->middleware(IsSalesManagerAccess::class);
 
 Route::any('transactions/refund', [SubscriptionController::class, 'processRefund'])->name('transactions.refund')->middleware(IsAdmin::class);
 
@@ -394,7 +397,7 @@ Route::any('/phonepe/autopay/callback', [PhonePeAutoPayTestController::class, 'h
 Route::any('/phonepe/autopay/webhook', [PhonePeAutoPayTestController::class, 'handleWebhook'])->name('phonepe.autopay.webhook')->withoutMiddleware([\App\Http\Middleware\Authenticate::class]);
 
 // PhonePe Simple Payment Test (sends immediate payment request to UPI)
-Route::get('/phonepe/simple-payment-test', function() {
+Route::get('/phonepe/simple-payment-test', function () {
     return view('phonepe_simple_payment_test');
 })->name('phonepe.simple_payment_test')->middleware(IsAdmin::class);
 
@@ -601,7 +604,7 @@ Route::post('getInterestList', [InterestController::class, 'getInterestList'])->
 
 
 Route::middleware(IsAdmin::class)->group(function () {
-//    Route::get('whatsapp-report', [WhatsAppTemplateController::class, 'report'])->name('whatsapp_report.view');
+    //    Route::get('whatsapp-report', [WhatsAppTemplateController::class, 'report'])->name('whatsapp_report.view');
 //    Route::get('whatsapp-campaign', [WhatsAppTemplateController::class, 'templateIndex'])->name('whatsapp_campaign.view');
 //    Route::post('whatsapp-campaign-start', [WhatsAppTemplateController::class, 'startCampaign'])->name('start_wp_campaign');
 //    Route::get('/whatsapp-report/failed-logs/{log_id}', [WhatsAppTemplateController::class, 'failedLogs'])->name('whatsapp_report.failed_logs');
@@ -622,7 +625,7 @@ Route::middleware(IsAdmin::class)->group(function () {
 //        ->name('whatsapp_template.toggle_auto_resume');
 //});
 
-Route::middleware(IsAdmin::class)->group(function (){
+Route::middleware(IsAdmin::class)->group(function () {
 
     Route::get('get_email_tmp', [EmailTemplateController::class, 'getEmailTmp'])->name('get_email_tmp')->middleware(IsAdmin::class);
     Route::resource('email_template', EmailTemplateController::class)->middleware(IsAdmin::class);
@@ -670,19 +673,19 @@ Route::post('/recent-expire/followup-update', [RecentExpireController::class, 'f
 Route::get('/payment-link/callback', [OrderUserController::class, 'paymentLinkCallback'])
     ->name('payment_link.callback')
     ->withoutMiddleware([\App\Http\Middleware\Authenticate::class]);
-    
+
 Route::get('/payment-link/phonepe-callback', [OrderUserController::class, 'phonePePaymentLinkCallback'])
     ->name('payment_link.phonepe_callback')
     ->withoutMiddleware([\App\Http\Middleware\Authenticate::class]);
-    
+
 Route::post('/payment-link/phonepe-callback', [OrderUserController::class, 'phonePePaymentLinkCallback'])
     ->name('payment_link.phonepe_callback_post')
     ->withoutMiddleware([\App\Http\Middleware\Authenticate::class]);
-    
+
 Route::get('/payment-success', [OrderUserController::class, 'paymentSuccess'])
     ->name('payment.success')
     ->withoutMiddleware([\App\Http\Middleware\Authenticate::class]);
-    
+
 Route::get('/payment-failed', [OrderUserController::class, 'paymentFailed'])
     ->name('payment.failed')
     ->withoutMiddleware([\App\Http\Middleware\Authenticate::class]);
@@ -720,7 +723,7 @@ Route::get('get-options/{table}/{idColumn}/{nameColumn}', function ($table, $idC
     return DB::table($table)->select($idColumn, $nameColumn)->get();
 })->middleware('auth');
 
-Route::any("showTranscation",[HomeController::class,'showTranscation'])->name('showTranscation')->middleware(IsAdmin::class);
+Route::any("showTranscation", [HomeController::class, 'showTranscation'])->name('showTranscation')->middleware(IsAdmin::class);
 
 Route::get('/get-storage-link', function (Request $request) {
     $src = $request->query('src');
@@ -754,7 +757,7 @@ Route::get('get-unique-options/{table}/{column}', function ($table, $column) {
     return response()->json($options);
 })->middleware('auth');
 
-Route::get("/free_exports",[SubscriptionController::class,'freeExports'])->name('free_exports');
+Route::get("/free_exports", [SubscriptionController::class, 'freeExports'])->name('free_exports');
 
 Route::get('/clear-cache', function () {
     Artisan::call('optimize');
@@ -774,15 +777,15 @@ Route::get('/clear-trending', function () {
 
 Route::get('seo_error_list', [SeoErrorListController::class, 'index'])->name('seo_error_list')->middleware(IsSeoAccess::class);
 // SSE endpoint for real-time order updates
-Route::get('/order-updates-stream', function() {
-    return response()->stream(function() {
+Route::get('/order-updates-stream', function () {
+    return response()->stream(function () {
         // Set headers for SSE
         echo "data: " . json_encode(['type' => 'connected', 'message' => 'SSE Stream connected']) . "\n\n";
         ob_flush();
         flush();
-        
+
         $lastOrderId = (int) request()->get('last_id', 0);
-        
+
         while (true) {
             try {
                 // Check for new orders
@@ -792,12 +795,12 @@ Route::get('/order-updates-stream', function() {
                     ->orderBy('id', 'asc')
                     ->limit(10)
                     ->get();
-                
+
                 if ($newOrders->count() > 0) {
                     foreach ($newOrders as $order) {
                         // Get user data safely
                         $user = $order->user;
-                        
+
                         $orderData = [
                             'type' => 'new_order',
                             'order' => [
@@ -822,26 +825,26 @@ Route::get('/order-updates-stream', function() {
                                 'emp_id' => $order->emp_id ?? 0,
                             ]
                         ];
-                        
+
                         echo "data: " . json_encode($orderData) . "\n\n";
                         $lastOrderId = $order->id;
-                        
+
                         \Log::info('SSE: Sent new order', ['order_id' => $order->id]);
                     }
-                    
+
                     ob_flush();
                     flush();
                 }
-                
+
                 // Sleep for 1 second before checking again
                 sleep(1);
-                
+
                 // Check if connection is still alive
                 if (connection_aborted()) {
                     \Log::info('SSE: Connection aborted');
                     break;
                 }
-                
+
             } catch (\Exception $e) {
                 \Log::error('SSE Error', ['error' => $e->getMessage()]);
                 echo "data: " . json_encode(['type' => 'error', 'message' => $e->getMessage()]) . "\n\n";
@@ -871,24 +874,24 @@ Route::middleware(['auth'])->prefix('designer-system')->name('designer_system.')
     Route::get('/applications', [DesignerSystemController::class, 'applications'])->name('applications');
     Route::post('/application/{id}/approve', [DesignerSystemController::class, 'approveApplication'])->name('application.approve');
     Route::post('/application/{id}/reject', [DesignerSystemController::class, 'rejectApplication'])->name('application.reject');
-    
+
     // Designers List
     Route::get('/designers', [DesignerSystemController::class, 'designers'])->name('designers');
-    
+
     // Design Submissions (Designer Head)
     Route::get('/design-submissions', [DesignerSystemController::class, 'designSubmissions'])->name('design_submissions');
     Route::post('/design/{id}/approve', [DesignerSystemController::class, 'approveDesign'])->name('design.approve');
     Route::post('/design/{id}/reject', [DesignerSystemController::class, 'rejectDesign'])->name('design.reject');
-    
+
     // SEO Submissions (SEO Head)
     Route::get('/seo-submissions', [DesignerSystemController::class, 'seoSubmissions'])->name('seo_submissions');
     Route::post('/design/{id}/publish', [DesignerSystemController::class, 'publishDesign'])->name('design.publish');
-    
+
     // Withdrawals (Admin)
     Route::get('/withdrawals', [DesignerSystemController::class, 'withdrawals'])->name('withdrawals');
     Route::post('/withdrawal/{id}/process', [DesignerSystemController::class, 'processWithdrawal'])->name('withdrawal.process');
     Route::post('/withdrawal/{id}/reject', [DesignerSystemController::class, 'rejectWithdrawal'])->name('withdrawal.reject');
-    
+
     // Wallet Settings
     Route::get('/wallet-settings', [WalletSettingController::class, 'index'])->name('wallet_settings');
     Route::get('/wallet-settings/create', [WalletSettingController::class, 'create'])->name('wallet_settings.create');
@@ -897,21 +900,21 @@ Route::middleware(['auth'])->prefix('designer-system')->name('designer_system.')
     Route::put('/wallet-settings/{id}', [WalletSettingController::class, 'update'])->name('wallet_settings.update');
     Route::delete('/wallet-settings/{id}', [WalletSettingController::class, 'destroy'])->name('wallet_settings.destroy');
     Route::post('/wallet-settings/{id}/toggle', [WalletSettingController::class, 'toggleActive'])->name('wallet_settings.toggle');
-    
+
     // Designer Types
     Route::get('/types', [DesignerSystemSettingsController::class, 'typesIndex'])->name('types');
     Route::post('/types', [DesignerSystemSettingsController::class, 'storeType'])->name('types.store');
     Route::put('/types/{id}', [DesignerSystemSettingsController::class, 'updateType'])->name('types.update');
     Route::delete('/types/{id}', [DesignerSystemSettingsController::class, 'deleteType'])->name('types.delete');
     Route::post('/types/{id}/toggle', [DesignerSystemSettingsController::class, 'toggleTypeActive'])->name('types.toggle');
-    
+
     // Designer Categories
     Route::get('/categories', [DesignerSystemSettingsController::class, 'categoriesIndex'])->name('categories');
     Route::post('/categories', [DesignerSystemSettingsController::class, 'storeCategory'])->name('categories.store');
     Route::put('/categories/{id}', [DesignerSystemSettingsController::class, 'updateCategory'])->name('categories.update');
     Route::delete('/categories/{id}', [DesignerSystemSettingsController::class, 'deleteCategory'])->name('categories.delete');
     Route::post('/categories/{id}/toggle', [DesignerSystemSettingsController::class, 'toggleCategoryActive'])->name('categories.toggle');
-    
+
     // Designer Goals
     Route::get('/goals', [DesignerSystemSettingsController::class, 'goalsIndex'])->name('goals');
     Route::post('/goals', [DesignerSystemSettingsController::class, 'storeGoal'])->name('goals.store');
@@ -923,10 +926,10 @@ Route::middleware(['auth'])->prefix('designer-system')->name('designer_system.')
 
 
 // Payment success and failed pages
-Route::get('/payment-success', function() {
+Route::get('/payment-success', function () {
     return view('payment.success');
 });
 
-Route::get('/payment-failed', function() {
+Route::get('/payment-failed', function () {
     return view('payment.failed');
 });

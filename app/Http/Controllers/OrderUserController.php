@@ -14,7 +14,7 @@ use App\Models\Subscription;
 use App\Models\TransactionLog;
 use App\Models\User;
 use App\Models\UserData;
-use App\Models\PaymentConfiguration;
+use App\Models\Pricing\PaymentConfiguration;
 use App\Models\PurchaseHistory;
 use App\Services\PhonePeAutoPayService;
 use Illuminate\Http\JsonResponse;
@@ -182,6 +182,7 @@ class OrderUserController extends AppBaseController
         $fromWhere = $request->get('from_where');
         $followupFilter = $request->get('followup_filter');
         $followupLabelFilter = $request->get('followup_label_filter'); // New filter
+        $usageTypeFilter = $request->get('usage_type_filter'); // Usage Type filter
 
         if ($filterType === 'remove_duplicate') {
             $query->whereIn('id', function ($sub) {
@@ -244,6 +245,15 @@ class OrderUserController extends AppBaseController
             $query->where('followup_label', $followupLabelFilter);
         }
 
+        // Usage Type filter - Join with personal_details table to filter by usage
+        if (!empty($usageTypeFilter) && in_array($usageTypeFilter, ['personal', 'professional'])) {
+            $query->whereHas('user', function($q) use ($usageTypeFilter) {
+                $q->whereHas('personalDetails', function($pd) use ($usageTypeFilter) {
+                    $pd->where('usage', $usageTypeFilter);
+                });
+            });
+        }
+
         $filters = [
             'whatsapp_template_count' => $whatsappFilter,
             'email_template_count' => $emailFilter,
@@ -295,6 +305,7 @@ class OrderUserController extends AppBaseController
             'fromWhere',
             'followupFilter',
             'followupLabelFilter', // Pass to view
+            'usageTypeFilter', // Pass usage type filter to view
             'datas',
             'searchTerm'
         ))->with('followupLabels', self::FOLLOWUP_LABELS); // Pass labels to view
@@ -894,6 +905,20 @@ class OrderUserController extends AppBaseController
                 'usage_type' => $validated['usage_type'] ?? $validated['plan_type'], // Default to plan_type if not provided
                 'reference_id' => $referenceId,
                 'status' => 'created',
+            ]);
+            
+            // Update or create personal_details with usage type
+            PersonalDetails::updateOrCreate(
+                ['uid' => $user->uid],
+                [
+                    'user_name' => $validated['user_name'],
+                    'usage' => $validated['plan_type'], // Store usage purpose in personal_details
+                ]
+            );
+            
+            \Log::info('Personal details updated with usage type', [
+                'uid' => $user->uid,
+                'usage' => $validated['plan_type']
             ]);
             
             // Create payment link via Razorpay or PhonePe

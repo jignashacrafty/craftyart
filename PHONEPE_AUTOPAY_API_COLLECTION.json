@@ -7,7 +7,43 @@
   },
   "item": [
     {
-      "name": "1. Setup AutoPay Subscription",
+      "name": "1. Generate QR Code for AutoPay",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"user_id\": \"test_user_123\",\n    \"plan_id\": \"plan_monthly_99\",\n    \"amount\": 1,\n    \"upi\": \"vrajsurani606@okaxis\",\n    \"target_app\": \"com.phonepe.app\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/phonepe/autopay/generate-qr",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "phonepe",
+            "autopay",
+            "generate-qr"
+          ]
+        },
+        "description": "🎯 **NEW API - Generate QR Code for AutoPay Subscription**\n\nThis API creates a subscription and returns QR code data that React developers can use to display a scannable QR code.\n\n**Request Body:**\n- `user_id` (required): User identifier\n- `plan_id` (required): Subscription plan ID\n- `amount` (required): Amount in rupees (minimum 1)\n- `upi` (optional): User's UPI ID\n- `target_app` (optional): Target UPI app (default: com.phonepe.app)\n\n**Response:**\n```json\n{\n  \"success\": true,\n  \"message\": \"QR Code generated successfully\",\n  \"data\": {\n    \"merchant_order_id\": \"MO_...\",\n    \"merchant_subscription_id\": \"MS_...\",\n    \"phonepe_order_id\": \"...\",\n    \"state\": \"PENDING\",\n    \"expire_at\": \"2026-02-21T12:00:00Z\",\n    \"qr_code\": {\n      \"base64\": \"data:image/png;base64,iVBORw0KGgoAAAANS...\",\n      \"intent_url\": \"upi://pay?...\",\n      \"decoded_params\": {\n        \"pa\": \"merchant@upi\",\n        \"pn\": \"Merchant Name\",\n        \"am\": \"1.00\",\n        \"cu\": \"INR\",\n        \"tn\": \"Transaction note\"\n      }\n    },\n    \"instructions\": {\n      \"step_1\": \"Open any UPI app (PhonePe, GPay, Paytm, etc.)\",\n      \"step_2\": \"Tap on 'Scan QR Code' option\",\n      \"step_3\": \"Scan this QR code with your phone camera\",\n      \"step_4\": \"Verify amount and complete payment\"\n    }\n  }\n}\n```\n\n**How to Use in React:**\n\n```jsx\n// 1. Call the API\nconst response = await fetch('{{base_url}}/api/phonepe/autopay/generate-qr', {\n  method: 'POST',\n  headers: {\n    'Content-Type': 'application/json',\n    'Accept': 'application/json'\n  },\n  body: JSON.stringify({\n    user_id: 'user123',\n    plan_id: 'monthly_plan',\n    amount: 99,\n    upi: 'user@okaxis'\n  })\n});\n\nconst data = await response.json();\n\n// 2. Display QR Code\n<img \n  src={data.data.qr_code.base64} \n  alt=\"Scan to Pay\" \n  style={{ width: '300px', height: '300px' }}\n/>\n\n// 3. Show Instructions\n<div>\n  <h3>Scan QR Code to Pay</h3>\n  <p>{data.data.instructions.step_1}</p>\n  <p>{data.data.instructions.step_2}</p>\n  <p>{data.data.instructions.step_3}</p>\n  <p>{data.data.instructions.step_4}</p>\n</div>\n\n// 4. Save subscription ID for status check\nconst subscriptionId = data.data.merchant_subscription_id;\n```\n\n**Features:**\n- ✅ Returns base64 encoded QR code image\n- ✅ Ready to use in <img> tag\n- ✅ No external QR library needed in frontend\n- ✅ Includes UPI intent URL for deep linking\n- ✅ Decoded parameters for custom UI\n- ✅ Step-by-step instructions for users\n\n**⚠️ NO CSRF TOKEN NEEDED - This is an API route!**"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Setup AutoPay Subscription",
       "request": {
         "method": "POST",
         "header": [
@@ -43,7 +79,43 @@
       "response": []
     },
     {
-      "name": "2. Get Subscription Status",
+      "name": "3. Get Subscription Status",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"user_id\": \"test_user_123\",\n    \"plan_id\": \"plan_monthly_99\",\n    \"amount\": 1,\n    \"upi\": \"vrajsurani606@okaxis\",\n    \"target_app\": \"com.phonepe.app\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/phonepe/autopay/setup",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "phonepe",
+            "autopay",
+            "setup"
+          ]
+        },
+        "description": "Creates a new AutoPay subscription setup request.\n\n**Request Body:**\n- `user_id` (required): User identifier\n- `plan_id` (required): Subscription plan ID\n- `amount` (required): Amount in rupees (minimum 1)\n- `upi` (optional): User's UPI ID\n- `target_app` (optional): Target UPI app\n\n**Response:**\n- `merchant_order_id`: Your order ID\n- `merchant_subscription_id`: Your subscription ID (SAVE THIS!)\n- `phonepe_order_id`: PhonePe's order ID\n- `redirect_url`: URL to redirect user for payment\n- `state`: Current state (PENDING)\n\n**What Happens:**\n1. Creates Order in database\n2. Generates OAuth token automatically\n3. Sends subscription setup request to PhonePe\n4. Returns redirect URL for user to complete payment\n5. User approves mandate on their phone\n\n**⚠️ NO CSRF TOKEN NEEDED - This is an API route!**"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get Subscription Status",
       "request": {
         "method": "GET",
         "header": [
@@ -71,7 +143,7 @@
       "response": []
     },
     {
-      "name": "3. Trigger Manual Redemption",
+      "name": "4. Trigger Manual Redemption",
       "request": {
         "method": "POST",
         "header": [
@@ -107,7 +179,7 @@
       "response": []
     },
     {
-      "name": "4. Cancel Subscription",
+      "name": "5. Cancel Subscription",
       "request": {
         "method": "POST",
         "header": [

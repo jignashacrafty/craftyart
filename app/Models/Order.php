@@ -130,10 +130,10 @@ class Order extends Model
         return $txnId;
     }
 
-        public function user(): BelongsTo
-        {
-            return $this->belongsTo(UserData::class, 'user_id', 'uid');
-        }
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(UserData::class, 'user_id', 'uid');
+    }
 
     public function userActive(): BelongsTo
     {
@@ -345,7 +345,7 @@ class Order extends Model
                             "image" => HelperController::generatePublicUrl($planItem->post_thumb),
                             "width" => $planItem->width,
                             "height" => $planItem->height,
-                            "amount" => ($isInr ? "₹" : "$").$amount,
+                            "amount" => ($isInr ? "₹" : "$") . $amount,
                             "link" => $planItem->page_link,
                         ];
                     } else if ($planType === 'video') { // video
@@ -361,11 +361,11 @@ class Order extends Model
                             "image" => HelperController::generatePublicUrl($planItem->video_thumb),
                             "width" => $planItem->width,
                             "height" => $planItem->height,
-                            "amount" => ($isInr ? "₹" : "$").$amount,
+                            "amount" => ($isInr ? "₹" : "$") . $amount,
                             "link" => "",
                         ];
                     } else {
-                        $pyt = RateController::getCaricatureRates(RateController::getRates(true), $size,0,$planItem->editor_choice);
+                        $pyt = RateController::getCaricatureRates(RateController::getRates(true), $size, 0, $planItem->editor_choice);
                         $amount = $isInr ? $pyt['inrVal'] : $pyt['usdVal'];
                         $totalAmount += $amount;
 
@@ -374,7 +374,7 @@ class Order extends Model
                             "image" => $planItem->thumbnail_url,
                             "width" => $planItem->width,
                             "height" => $planItem->height,
-                            "amount" => ($isInr ? "₹" : "$").$amount,
+                            "amount" => ($isInr ? "₹" : "$") . $amount,
                             "link" => $planItem->page_link,
                         ];
                     }
@@ -457,9 +457,12 @@ class Order extends Model
     {
         $hasFb = !empty($this->fbc);
         $hasGoogle = !empty($this->gclid) || !empty($this->wbraid) || !empty($this->gbraid);
-        if ($hasFb && $hasGoogle) return 'Meta-Google';
-        if ($hasFb) return 'Meta';
-        if ($hasGoogle) return 'Google';
+        if ($hasFb && $hasGoogle)
+            return 'Meta-Google';
+        if ($hasFb)
+            return 'Meta';
+        if ($hasGoogle)
+            return 'Google';
         return 'Seo';
     }
 

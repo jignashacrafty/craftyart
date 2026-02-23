@@ -50,9 +50,7 @@ class AiCreditTransactionController extends AppBaseController
             $str_count = "Showing " . ($count - $diff) . "-" . $count . " of " . $total . " entries";
         }
 
-        return view("subscription/credit_transaction",compact('transactions','str_count'));
+        return view("subscription/credit_transaction", compact('transactions', 'str_count'));
     }
-
-
 
 }

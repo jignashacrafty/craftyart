@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Utils\ContentManager;
 use App\Models\Draft;
 use App\Models\OfferPopUp;
-use App\Models\PaymentConfiguration;
+use App\Models\Pricing\PaymentConfiguration;
 use App\Models\Pricing\OfferPackage;
 use App\Models\Pricing\Plan;
 use App\Models\Pricing\PlanDuration;

@@ -174,6 +174,13 @@ Route::post('auth/logout', [AuthController::class, 'logout']);
 Route::post('auth/user', [AuthController::class, 'getUser']);
 Route::post('auth/googleSignIn', [AuthController::class, 'handleGoogleSignIn']);
 
+// Admin/Staff Simple Login (No device tracking - for Postman/API testing)
+Route::post('admin/login', [App\Http\Controllers\Api\AdminAuthController::class, 'login']);
+Route::post('admin/logout', [App\Http\Controllers\Api\AdminAuthController::class, 'logout']);
+Route::middleware('auth:api')->group(function () {
+    Route::get('admin/me', [App\Http\Controllers\Api\AdminAuthController::class, 'me']);
+});
+
 
 Route::post('createOrder', [AuthController::class, 'createOrder']);
 
@@ -223,9 +230,9 @@ Route::post('getplanDetails2', [PlanController::class, 'getplanDetails2']);
 Route::post('getAdditionalUserPlan', [PlanController::class, 'getAdditionalUserPlan']);
 Route::post('getReviews', [PReviewController::class, 'getReviews']);
 Route::any('get_portfolio', [UserApiController::class, 'getPortfolio']);
-Route::any('checkSubscriptionDetails',[PlanController::class,'checkSubscriptionDetails']);
+Route::any('checkSubscriptionDetails', [PlanController::class, 'checkSubscriptionDetails']);
 
-Route::any("send-whatsapp",[WhatsAppController::class,'send']);
+Route::any("send-whatsapp", [WhatsAppController::class, 'send']);
 
 //Route::any('sitemap', [SitemapController::class, 'sitemap']);
 Route::get('new-sitemap.xml', [SitemapController::class, 'sitemapIndex']);
@@ -291,6 +298,8 @@ Route::any('phonepe/autopay/setup', [App\Http\Controllers\Api\PhonePeAutoPayCont
 Route::get('phonepe/autopay/status/{merchantSubscriptionId}', [App\Http\Controllers\Api\PhonePeAutoPayController::class, 'getSubscriptionStatus']);
 Route::post('phonepe/autopay/redeem', [App\Http\Controllers\Api\PhonePeAutoPayController::class, 'triggerManualRedemption']);
 Route::post('phonepe/autopay/cancel', [App\Http\Controllers\Api\PhonePeAutoPayController::class, 'cancelSubscription']);
+Route::post('phonepe/autopay/generate-qr', [App\Http\Controllers\Api\PhonePeAutoPayController::class, 'generateQRCode']);
+Route::post('phonepe/autopay/validateUpi', [App\Http\Controllers\Api\PhonePeAutoPayController::class, 'validateUpi']);
 
 // JSON file handling APIs
 Route::post('/json/save', [CaricatureController::class, 'saveJson']);
@@ -313,7 +322,7 @@ Route::prefix('order-user')->middleware('api')->group(function () {
     Route::get('/followup-labels', [App\Http\Controllers\Api\OrderUserApiController::class, 'getFollowupLabels']);
     Route::get('/get-plans', [App\Http\Controllers\Api\OrderUserApiController::class, 'getPlans']);
     Route::post('/validate-email', [App\Http\Controllers\Api\OrderUserApiController::class, 'validateEmail']);
-    
+
     // Optional auth routes (work without auth but better with auth)
     Route::get('/', [App\Http\Controllers\Api\OrderUserApiController::class, 'index']);
     Route::get('/get-user-usage', [App\Http\Controllers\Api\OrderUserApiController::class, 'getUserUsage']);
@@ -321,7 +330,7 @@ Route::prefix('order-user')->middleware('api')->group(function () {
     Route::get('/check-phonepe-status/{merchantOrderId}', [App\Http\Controllers\Api\OrderUserApiController::class, 'checkPhonePeStatus']);
     Route::get('/check-razorpay-status/{paymentLinkId}', [App\Http\Controllers\Api\OrderUserApiController::class, 'checkRazorpayStatus']);
     Route::get('/new-orders', [App\Http\Controllers\Api\OrderUserApiController::class, 'getNewOrders']);
-    
+
     // Auth required routes (use encrypted token middleware)
     Route::middleware(\App\Http\Middleware\ValidateEncryptedToken::class)->group(function () {
         Route::post('/followup-update', [App\Http\Controllers\Api\OrderUserApiController::class, 'followupUpdate']);
@@ -524,7 +533,7 @@ Route::prefix('designer')->group(function () {
     Route::post('/apply', [DesignerApplicationController::class, 'apply']);
     Route::post('/check-status', [DesignerApplicationController::class, 'checkStatus']);
     Route::post('/enrollment/options', [DesignerEnrollmentController::class, 'getEnrollmentOptions']);
-    
+
     // Enrollment Metadata APIs (Public - No Auth)
     Route::get('/enrollment/types', [DesignerEnrollmentController::class, 'getTypes']);
     Route::get('/enrollment/categories', [DesignerEnrollmentController::class, 'getCategories']);
@@ -538,13 +547,13 @@ Route::prefix('designer')->middleware('auth:api')->group(function () {
     Route::post('/enrollment/submit', [DesignerEnrollmentController::class, 'submitEnrollment']);
     Route::post('/enrollment/choose-plan', [DesignerEnrollmentController::class, 'choosePlan']);
     Route::get('/enrollment/status', [DesignerEnrollmentController::class, 'getEnrollmentStatus']);
-    
+
     // Profile & Design APIs
     Route::get('/profile', [DesignerController::class, 'getProfile']);
     Route::post('/design/submit', [DesignerController::class, 'submitDesign']);
     Route::get('/designs', [DesignerController::class, 'getDesigns']);
     Route::get('/design/{id}', [DesignerController::class, 'getDesignDetails']);
-    
+
     // Wallet APIs
     Route::get('/wallet', [DesignerWalletController::class, 'getWallet']);
     Route::get('/transactions', [DesignerWalletController::class, 'getTransactions']);
@@ -583,11 +592,11 @@ Route::prefix('admin/designer')->middleware('auth:api')->group(function () {
 Route::prefix('payment')->group(function () {
     // Create payment link (minimal data required)
     Route::post('create-link', [App\Http\Controllers\Api\SimplePaymentController::class, 'createPaymentLink']);
-    
+
     // Check payment status
     Route::get('status', [App\Http\Controllers\Api\SimplePaymentController::class, 'checkPaymentStatus']);
     Route::post('status', [App\Http\Controllers\Api\SimplePaymentController::class, 'checkPaymentStatus']);
-    
+
     // Webhook handlers
     Route::any('razorpay-webhook', [App\Http\Controllers\Api\SimplePaymentController::class, 'razorpayWebhook']);
     Route::any('phonepe-webhook', [App\Http\Controllers\Api\SimplePaymentController::class, 'phonePeWebhook']);

@@ -17,17 +17,17 @@ class WebSocketBroadcastController extends Controller
             $secret = config('broadcasting.connections.pusher.secret');
             $host = config('broadcasting.connections.pusher.options.host');
             $port = config('broadcasting.connections.pusher.options.port');
-            
+
             $channel = 'orders';
             $event = 'new-order-created';
-            
+
             // Get employee name for Follow By column
             $followByName = '-';
             if (!empty($order->emp_id)) {
                 $employee = \App\Models\User::find($order->emp_id);
                 $followByName = $employee ? $employee->name : 'N/A';
             }
-            
+
             // Format plan items for display
             $planItems = $order->plan_items;
             $planItemsDisplay = '-';
@@ -40,7 +40,7 @@ class WebSocketBroadcastController extends Controller
                     $planItemsDisplay = $firstItem ?? '-';
                 }
             }
-            
+
             // Prepare order data
             $orderData = [
                 'order' => [
@@ -64,30 +64,30 @@ class WebSocketBroadcastController extends Controller
                     'emp_id' => $order->emp_id ?? 0,
                 ]
             ];
-            
+
             $data = json_encode($orderData);
-            
+
             // Prepare the request body
             $body = json_encode([
                 'name' => $event,
                 'channels' => [$channel],
                 'data' => $data
             ]);
-            
+
             // Generate Pusher authentication signature
             $timestamp = time();
             $method = 'POST';
             $path = "/apps/{$appId}/events";
             $bodyMd5 = md5($body);
-            
+
             $stringToSign = implode("\n", [
                 $method,
                 $path,
                 "auth_key={$key}&auth_timestamp={$timestamp}&auth_version=1.0&body_md5={$bodyMd5}"
             ]);
-            
+
             $authSignature = hash_hmac('sha256', $stringToSign, $secret);
-            
+
             // Build the URL with query parameters
             $url = "http://{$host}:{$port}{$path}";
             $url .= "?auth_key={$key}";
@@ -95,12 +95,12 @@ class WebSocketBroadcastController extends Controller
             $url .= "&auth_version=1.0";
             $url .= "&body_md5={$bodyMd5}";
             $url .= "&auth_signature={$authSignature}";
-            
+
             \Log::info('WebSocketBroadcast: Sending direct HTTP API request', [
                 'url' => $url,
                 'body_size' => strlen($body)
             ]);
-            
+
             // Make the HTTP request using cURL
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -111,12 +111,12 @@ class WebSocketBroadcastController extends Controller
                 'Content-Length: ' . strlen($body)
             ]);
             curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-            
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $error = curl_error($ch);
             curl_close($ch);
-            
+
             if ($httpCode === 200) {
                 \Log::info('WebSocketBroadcast: Direct HTTP API success', [
                     'order_id' => $order->id,
@@ -133,7 +133,7 @@ class WebSocketBroadcastController extends Controller
                 ]);
                 return false;
             }
-            
+
         } catch (\Exception $e) {
             \Log::error('WebSocketBroadcast: Direct HTTP API exception', [
                 'order_id' => $order->id,
@@ -141,7 +141,7 @@ class WebSocketBroadcastController extends Controller
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
-            
+
             return false;
         }
     }
@@ -157,10 +157,10 @@ class WebSocketBroadcastController extends Controller
             $secret = config('broadcasting.connections.pusher.secret');
             $host = config('broadcasting.connections.pusher.options.host');
             $port = config('broadcasting.connections.pusher.options.port');
-            
+
             $channel = 'orders';
             $event = 'order-status-changed';
-            
+
             // Prepare status change data
             $statusData = [
                 'order_id' => $order->id,
@@ -168,30 +168,30 @@ class WebSocketBroadcastController extends Controller
                 'new_status' => $newStatus,
                 'should_remove' => !in_array($newStatus, ['pending', 'failed']),
             ];
-            
+
             $data = json_encode($statusData);
-            
+
             // Prepare the request body
             $body = json_encode([
                 'name' => $event,
                 'channels' => [$channel],
                 'data' => $data
             ]);
-            
+
             // Generate Pusher authentication signature
             $timestamp = time();
             $method = 'POST';
             $path = "/apps/{$appId}/events";
             $bodyMd5 = md5($body);
-            
+
             $stringToSign = implode("\n", [
                 $method,
                 $path,
                 "auth_key={$key}&auth_timestamp={$timestamp}&auth_version=1.0&body_md5={$bodyMd5}"
             ]);
-            
+
             $authSignature = hash_hmac('sha256', $stringToSign, $secret);
-            
+
             // Build the URL with query parameters
             $url = "http://{$host}:{$port}{$path}";
             $url .= "?auth_key={$key}";
@@ -199,13 +199,13 @@ class WebSocketBroadcastController extends Controller
             $url .= "&auth_version=1.0";
             $url .= "&body_md5={$bodyMd5}";
             $url .= "&auth_signature={$authSignature}";
-            
+
             \Log::info('WebSocketBroadcast: Sending status change event', [
                 'order_id' => $order->id,
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus
             ]);
-            
+
             // Make the HTTP request using cURL
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -216,12 +216,12 @@ class WebSocketBroadcastController extends Controller
                 'Content-Length: ' . strlen($body)
             ]);
             curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-            
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $error = curl_error($ch);
             curl_close($ch);
-            
+
             if ($httpCode === 200) {
                 \Log::info('WebSocketBroadcast: Status change event sent successfully', [
                     'order_id' => $order->id,
@@ -236,7 +236,7 @@ class WebSocketBroadcastController extends Controller
                 ]);
                 return false;
             }
-            
+
         } catch (\Exception $e) {
             \Log::error('WebSocketBroadcast: Status change exception', [
                 'order_id' => $order->id,
@@ -244,7 +244,7 @@ class WebSocketBroadcastController extends Controller
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
-            
+
             return false;
         }
     }
@@ -260,24 +260,24 @@ class WebSocketBroadcastController extends Controller
             $secret = config('broadcasting.connections.pusher.secret');
             $host = config('broadcasting.connections.pusher.options.host');
             $port = config('broadcasting.connections.pusher.options.port');
-            
+
             $channel = 'orders';
             $event = 'order-followup-changed';
-            
+
             // Get employee name for Follow By column
             $followByName = '-';
             if (!empty($order->emp_id)) {
                 $employee = \App\Models\User::find($order->emp_id);
                 $followByName = $employee ? $employee->name : 'N/A';
             }
-            
+
             // Get followup label display text
             $followupLabelDisplay = '';
             if (!empty($order->followup_label)) {
                 $labels = \App\Http\Controllers\OrderUserController::FOLLOWUP_LABELS;
                 $followupLabelDisplay = $labels[$order->followup_label] ?? $order->followup_label;
             }
-            
+
             // Prepare followup change data
             $followupData = [
                 'order_id' => $order->id,
@@ -288,30 +288,30 @@ class WebSocketBroadcastController extends Controller
                 'follow_by' => $followByName,
                 'emp_id' => $order->emp_id ?? 0,
             ];
-            
+
             $data = json_encode($followupData);
-            
+
             // Prepare the request body
             $body = json_encode([
                 'name' => $event,
                 'channels' => [$channel],
                 'data' => $data
             ]);
-            
+
             // Generate Pusher authentication signature
             $timestamp = time();
             $method = 'POST';
             $path = "/apps/{$appId}/events";
             $bodyMd5 = md5($body);
-            
+
             $stringToSign = implode("\n", [
                 $method,
                 $path,
                 "auth_key={$key}&auth_timestamp={$timestamp}&auth_version=1.0&body_md5={$bodyMd5}"
             ]);
-            
+
             $authSignature = hash_hmac('sha256', $stringToSign, $secret);
-            
+
             // Build the URL with query parameters
             $url = "http://{$host}:{$port}{$path}";
             $url .= "?auth_key={$key}";
@@ -319,13 +319,13 @@ class WebSocketBroadcastController extends Controller
             $url .= "&auth_version=1.0";
             $url .= "&body_md5={$bodyMd5}";
             $url .= "&auth_signature={$authSignature}";
-            
+
             \Log::info('WebSocketBroadcast: Sending followup change event', [
                 'order_id' => $order->id,
                 'followup_call' => $order->followup_call,
                 'follow_by' => $followByName
             ]);
-            
+
             // Make the HTTP request using cURL
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -336,12 +336,12 @@ class WebSocketBroadcastController extends Controller
                 'Content-Length: ' . strlen($body)
             ]);
             curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-            
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $error = curl_error($ch);
             curl_close($ch);
-            
+
             if ($httpCode === 200) {
                 \Log::info('WebSocketBroadcast: Followup change event sent successfully', [
                     'order_id' => $order->id,
@@ -356,7 +356,7 @@ class WebSocketBroadcastController extends Controller
                 ]);
                 return false;
             }
-            
+
         } catch (\Exception $e) {
             \Log::error('WebSocketBroadcast: Followup change exception', [
                 'order_id' => $order->id,
@@ -364,10 +364,131 @@ class WebSocketBroadcastController extends Controller
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
-            
+
             return false;
         }
     }
+
+    /**
+     * Broadcast transaction followup change event via WebSocket
+     */
+    public static function broadcastTransactionFollowUpChanged($transaction)
+    {
+        try {
+            $appId = config('broadcasting.connections.pusher.app_id');
+            $key = config('broadcasting.connections.pusher.key');
+            $secret = config('broadcasting.connections.pusher.secret');
+            $host = config('broadcasting.connections.pusher.options.host');
+            $port = config('broadcasting.connections.pusher.options.port');
+
+            $channel = 'orders';
+            $event = 'transaction-followup-changed';
+
+            // Get employee name for Follow By column
+            $followByName = '-';
+            if (!empty($transaction->emp_id)) {
+                $employee = \App\Models\User::find($transaction->emp_id);
+                $followByName = $employee ? $employee->name : 'N/A';
+            }
+
+            // Get followup label display text
+            $followupLabelDisplay = '';
+            if (!empty($transaction->followup_label)) {
+                $labels = \App\Http\Controllers\RecentExpireController::FOLLOWUP_LABELS;
+                $followupLabelDisplay = $labels[$transaction->followup_label] ?? $transaction->followup_label;
+            }
+
+            // Prepare followup change data
+            $followupData = [
+                'transaction_id' => $transaction->id,
+                'followup_call' => $transaction->followup_call ?? 0,
+                'followup_note' => $transaction->followup_note ?? '',
+                'followup_label' => $transaction->followup_label ?? '',
+                'followup_label_display' => $followupLabelDisplay,
+                'emp_name' => $followByName,
+                'emp_id' => $transaction->emp_id ?? 0,
+            ];
+
+            $data = json_encode($followupData);
+
+            // Prepare the request body
+            $body = json_encode([
+                'name' => $event,
+                'channels' => [$channel],
+                'data' => $data
+            ]);
+
+            // Generate Pusher authentication signature
+            $timestamp = time();
+            $method = 'POST';
+            $path = "/apps/{$appId}/events";
+            $bodyMd5 = md5($body);
+
+            $stringToSign = implode("\n", [
+                $method,
+                $path,
+                "auth_key={$key}&auth_timestamp={$timestamp}&auth_version=1.0&body_md5={$bodyMd5}"
+            ]);
+
+            $authSignature = hash_hmac('sha256', $stringToSign, $secret);
+
+            // Build the URL with query parameters
+            $url = "http://{$host}:{$port}{$path}";
+            $url .= "?auth_key={$key}";
+            $url .= "&auth_timestamp={$timestamp}";
+            $url .= "&auth_version=1.0";
+            $url .= "&body_md5={$bodyMd5}";
+            $url .= "&auth_signature={$authSignature}";
+
+            \Log::info('WebSocketBroadcast: Sending transaction followup change event', [
+                'transaction_id' => $transaction->id,
+                'followup_call' => $transaction->followup_call,
+                'emp_name' => $followByName
+            ]);
+
+            // Make the HTTP request using cURL
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json',
+                'Content-Length: ' . strlen($body)
+            ]);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+
+            if ($httpCode === 200) {
+                \Log::info('WebSocketBroadcast: Transaction followup change event sent successfully', [
+                    'transaction_id' => $transaction->id,
+                    'http_code' => $httpCode
+                ]);
+                return true;
+            } else {
+                \Log::error('WebSocketBroadcast: Transaction followup change event failed', [
+                    'transaction_id' => $transaction->id,
+                    'http_code' => $httpCode,
+                    'error' => $error
+                ]);
+                return false;
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('WebSocketBroadcast: Transaction followup change exception', [
+                'transaction_id' => $transaction->id,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            return false;
+        }
+    }
+
 
     /**
      * Broadcast designer application created event directly using HTTP API
@@ -380,10 +501,10 @@ class WebSocketBroadcastController extends Controller
             $secret = config('broadcasting.connections.pusher.secret');
             $host = config('broadcasting.connections.pusher.options.host');
             $port = config('broadcasting.connections.pusher.options.port');
-            
+
             $channel = 'designer-applications';
             $event = 'new-application';
-            
+
             // Prepare application data
             $applicationData = [
                 'id' => $application->id,
@@ -396,30 +517,30 @@ class WebSocketBroadcastController extends Controller
                 'status' => $application->status,
                 'created_at' => $application->created_at->format('d M Y'),
             ];
-            
+
             $data = json_encode($applicationData);
-            
+
             // Prepare the request body
             $body = json_encode([
                 'name' => $event,
                 'channels' => [$channel],
                 'data' => $data
             ]);
-            
+
             // Generate Pusher authentication signature
             $timestamp = time();
             $method = 'POST';
             $path = "/apps/{$appId}/events";
             $bodyMd5 = md5($body);
-            
+
             $stringToSign = implode("\n", [
                 $method,
                 $path,
                 "auth_key={$key}&auth_timestamp={$timestamp}&auth_version=1.0&body_md5={$bodyMd5}"
             ]);
-            
+
             $authSignature = hash_hmac('sha256', $stringToSign, $secret);
-            
+
             // Build the URL with query parameters
             $url = "http://{$host}:{$port}{$path}";
             $url .= "?auth_key={$key}";
@@ -427,13 +548,13 @@ class WebSocketBroadcastController extends Controller
             $url .= "&auth_version=1.0";
             $url .= "&body_md5={$bodyMd5}";
             $url .= "&auth_signature={$authSignature}";
-            
+
             \Log::info('WebSocketBroadcast: Sending designer application event', [
                 'application_id' => $application->id,
                 'url' => $url,
                 'body_size' => strlen($body)
             ]);
-            
+
             // Make the HTTP request using cURL
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -444,12 +565,12 @@ class WebSocketBroadcastController extends Controller
                 'Content-Length: ' . strlen($body)
             ]);
             curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-            
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $error = curl_error($ch);
             curl_close($ch);
-            
+
             if ($httpCode === 200) {
                 \Log::info('WebSocketBroadcast: Designer application event success', [
                     'application_id' => $application->id,
@@ -466,7 +587,7 @@ class WebSocketBroadcastController extends Controller
                 ]);
                 return false;
             }
-            
+
         } catch (\Exception $e) {
             \Log::error('WebSocketBroadcast: Designer application exception', [
                 'application_id' => $application->id,
@@ -474,7 +595,7 @@ class WebSocketBroadcastController extends Controller
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
-            
+
             return false;
         }
     }
@@ -492,10 +613,10 @@ class WebSocketBroadcastController extends Controller
             $secret = config('broadcasting.connections.pusher.secret');
             $host = config('broadcasting.connections.pusher.options.host');
             $port = config('broadcasting.connections.pusher.options.port');
-            
+
             $channel = 'design-submissions';
             $event = 'new-submission';
-            
+
             $submissionData = [
                 'id' => $submission->id,
                 'designer_name' => $submission->designer->profile->name ?? 'N/A',
@@ -504,46 +625,46 @@ class WebSocketBroadcastController extends Controller
                 'status' => $submission->status,
                 'created_at' => $submission->created_at->format('d M Y'),
             ];
-            
+
             $data = json_encode($submissionData);
             $body = json_encode([
                 'name' => $event,
                 'channels' => [$channel],
                 'data' => $data
             ]);
-            
+
             $timestamp = time();
             $method = 'POST';
             $path = "/apps/{$appId}/events";
             $bodyMd5 = md5($body);
-            
+
             $stringToSign = implode("\n", [
                 $method,
                 $path,
                 "auth_key={$key}&auth_timestamp={$timestamp}&auth_version=1.0&body_md5={$bodyMd5}"
             ]);
-            
+
             $authSignature = hash_hmac('sha256', $stringToSign, $secret);
-            
+
             $url = "http://{$host}:{$port}{$path}";
             $url .= "?auth_key={$key}&auth_timestamp={$timestamp}&auth_version=1.0&body_md5={$bodyMd5}&auth_signature={$authSignature}";
-            
+
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Content-Length: ' . strlen($body)]);
             curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-            
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-            
+
             \Log::info('WebSocketBroadcast: Design submission event', [
                 'submission_id' => $submission->id,
                 'http_code' => $httpCode
             ]);
-            
+
             return $httpCode === 200;
         } catch (\Exception $e) {
             \Log::error('WebSocketBroadcast: Design submission exception', [
@@ -564,51 +685,51 @@ class WebSocketBroadcastController extends Controller
             $secret = config('broadcasting.connections.pusher.secret');
             $host = config('broadcasting.connections.pusher.options.host');
             $port = config('broadcasting.connections.pusher.options.port');
-            
+
             $channel = 'design-submissions';
             $event = 'submission-status-changed';
-            
+
             $statusData = [
                 'id' => $submission->id,
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus,
                 'should_remove' => $oldStatus !== $newStatus,
             ];
-            
+
             $data = json_encode($statusData);
             $body = json_encode([
                 'name' => $event,
                 'channels' => [$channel],
                 'data' => $data
             ]);
-            
+
             $timestamp = time();
             $method = 'POST';
             $path = "/apps/{$appId}/events";
             $bodyMd5 = md5($body);
-            
+
             $stringToSign = implode("\n", [
                 $method,
                 $path,
                 "auth_key={$key}&auth_timestamp={$timestamp}&auth_version=1.0&body_md5={$bodyMd5}"
             ]);
-            
+
             $authSignature = hash_hmac('sha256', $stringToSign, $secret);
-            
+
             $url = "http://{$host}:{$port}{$path}";
             $url .= "?auth_key={$key}&auth_timestamp={$timestamp}&auth_version=1.0&body_md5={$bodyMd5}&auth_signature={$authSignature}";
-            
+
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Content-Length: ' . strlen($body)]);
             curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-            
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-            
+
             return $httpCode === 200;
         } catch (\Exception $e) {
             \Log::error('WebSocketBroadcast: Design submission status change exception', [
@@ -631,56 +752,56 @@ class WebSocketBroadcastController extends Controller
             $secret = config('broadcasting.connections.pusher.secret');
             $host = config('broadcasting.connections.pusher.options.host');
             $port = config('broadcasting.connections.pusher.options.port');
-            
+
             $channel = 'seo-submissions';
             $event = 'seo-status-changed';
-            
+
             $statusData = [
                 'id' => $submission->id,
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus,
                 'should_remove' => $oldStatus !== $newStatus,
             ];
-            
+
             $data = json_encode($statusData);
             $body = json_encode([
                 'name' => $event,
                 'channels' => [$channel],
                 'data' => $data
             ]);
-            
+
             $timestamp = time();
             $method = 'POST';
             $path = "/apps/{$appId}/events";
             $bodyMd5 = md5($body);
-            
+
             $stringToSign = implode("\n", [
                 $method,
                 $path,
                 "auth_key={$key}&auth_timestamp={$timestamp}&auth_version=1.0&body_md5={$bodyMd5}"
             ]);
-            
+
             $authSignature = hash_hmac('sha256', $stringToSign, $secret);
-            
+
             $url = "http://{$host}:{$port}{$path}";
             $url .= "?auth_key={$key}&auth_timestamp={$timestamp}&auth_version=1.0&body_md5={$bodyMd5}&auth_signature={$authSignature}";
-            
+
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Content-Length: ' . strlen($body)]);
             curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-            
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-            
+
             \Log::info('WebSocketBroadcast: SEO submission status change', [
                 'submission_id' => $submission->id,
                 'http_code' => $httpCode
             ]);
-            
+
             return $httpCode === 200;
         } catch (\Exception $e) {
             \Log::error('WebSocketBroadcast: SEO submission exception', [
@@ -701,10 +822,10 @@ class WebSocketBroadcastController extends Controller
             $secret = config('broadcasting.connections.pusher.secret');
             $host = config('broadcasting.connections.pusher.options.host');
             $port = config('broadcasting.connections.pusher.options.port');
-            
+
             $channel = 'designer-withdrawals';
             $event = 'new-withdrawal';
-            
+
             $withdrawalData = [
                 'id' => $withdrawal->id,
                 'designer_name' => $withdrawal->designer->profile->name ?? 'N/A',
@@ -712,46 +833,46 @@ class WebSocketBroadcastController extends Controller
                 'status' => $withdrawal->status,
                 'created_at' => $withdrawal->created_at->format('d M Y'),
             ];
-            
+
             $data = json_encode($withdrawalData);
             $body = json_encode([
                 'name' => $event,
                 'channels' => [$channel],
                 'data' => $data
             ]);
-            
+
             $timestamp = time();
             $method = 'POST';
             $path = "/apps/{$appId}/events";
             $bodyMd5 = md5($body);
-            
+
             $stringToSign = implode("\n", [
                 $method,
                 $path,
                 "auth_key={$key}&auth_timestamp={$timestamp}&auth_version=1.0&body_md5={$bodyMd5}"
             ]);
-            
+
             $authSignature = hash_hmac('sha256', $stringToSign, $secret);
-            
+
             $url = "http://{$host}:{$port}{$path}";
             $url .= "?auth_key={$key}&auth_timestamp={$timestamp}&auth_version=1.0&body_md5={$bodyMd5}&auth_signature={$authSignature}";
-            
+
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Content-Length: ' . strlen($body)]);
             curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-            
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-            
+
             \Log::info('WebSocketBroadcast: Withdrawal created', [
                 'withdrawal_id' => $withdrawal->id,
                 'http_code' => $httpCode
             ]);
-            
+
             return $httpCode === 200;
         } catch (\Exception $e) {
             \Log::error('WebSocketBroadcast: Withdrawal exception', [
@@ -772,51 +893,51 @@ class WebSocketBroadcastController extends Controller
             $secret = config('broadcasting.connections.pusher.secret');
             $host = config('broadcasting.connections.pusher.options.host');
             $port = config('broadcasting.connections.pusher.options.port');
-            
+
             $channel = 'designer-withdrawals';
             $event = 'withdrawal-status-changed';
-            
+
             $statusData = [
                 'id' => $withdrawal->id,
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus,
                 'should_remove' => $oldStatus !== $newStatus,
             ];
-            
+
             $data = json_encode($statusData);
             $body = json_encode([
                 'name' => $event,
                 'channels' => [$channel],
                 'data' => $data
             ]);
-            
+
             $timestamp = time();
             $method = 'POST';
             $path = "/apps/{$appId}/events";
             $bodyMd5 = md5($body);
-            
+
             $stringToSign = implode("\n", [
                 $method,
                 $path,
                 "auth_key={$key}&auth_timestamp={$timestamp}&auth_version=1.0&body_md5={$bodyMd5}"
             ]);
-            
+
             $authSignature = hash_hmac('sha256', $stringToSign, $secret);
-            
+
             $url = "http://{$host}:{$port}{$path}";
             $url .= "?auth_key={$key}&auth_timestamp={$timestamp}&auth_version=1.0&body_md5={$bodyMd5}&auth_signature={$authSignature}";
-            
+
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Content-Length: ' . strlen($body)]);
             curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-            
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-            
+
             return $httpCode === 200;
         } catch (\Exception $e) {
             \Log::error('WebSocketBroadcast: Withdrawal status change exception', [

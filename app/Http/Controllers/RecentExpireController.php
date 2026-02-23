@@ -52,7 +52,7 @@ class RecentExpireController extends AppBaseController
         if ($isSalesEmployee) {
             $salesEmployees = User::whereUserType(UserRole::SALES->id())->get();
             $salesEmployeeIds = $salesEmployees->pluck('id')->toArray();
-            if(!empty($salesEmployeeIds)){
+            if (!empty($salesEmployeeIds)) {
                 $userId = auth()->user()->id;
                 $employeeIndex = array_search($userId, $salesEmployeeIds);
                 if ($employeeIndex !== false) {
@@ -60,10 +60,10 @@ class RecentExpireController extends AppBaseController
 
                     $query->where(function ($q) use ($userId, $employeeIndex, $totalSalesEmployees) {
                         $q->where('emp_id', $userId)
-                        ->orWhere(function ($subQuery) use ($employeeIndex, $totalSalesEmployees) {
-                            $subQuery->where('emp_id',0)
-                                ->whereRaw("(id % ?) = ?", [$totalSalesEmployees, $employeeIndex]);
-                        });
+                            ->orWhere(function ($subQuery) use ($employeeIndex, $totalSalesEmployees) {
+                                $subQuery->where('emp_id', 0)
+                                    ->whereRaw("(id % ?) = ?", [$totalSalesEmployees, $employeeIndex]);
+                            });
                     });
                 }
             }
@@ -77,10 +77,20 @@ class RecentExpireController extends AppBaseController
         $followupFilter = $request->get('followup_filter');
         $search = trim($request->get('search'));
         $followupLabelFilter = $request->get('followup_label_filter'); // New filter
+        $usageTypeFilter = $request->get('usage_type_filter'); // Usage Type filter
 
 
         if (!empty($followupLabelFilter) && array_key_exists($followupLabelFilter, self::FOLLOWUP_LABELS)) {
             $query->where('transaction_logs.followup_label', $followupLabelFilter);
+        }
+
+        // Usage Type filter - Join with personal_details table to filter by usage
+        if (!empty($usageTypeFilter) && in_array($usageTypeFilter, ['personal', 'professional'])) {
+            $query->whereHas('userData', function ($q) use ($usageTypeFilter) {
+                $q->whereHas('personalDetails', function ($pd) use ($usageTypeFilter) {
+                    $pd->where('usage', $usageTypeFilter);
+                });
+            });
         }
 
         // WhatsApp filter
@@ -145,6 +155,7 @@ class RecentExpireController extends AppBaseController
             'emailFilter',
             'followupLabelFilter',
             'followupFilter',
+            'usageTypeFilter',
             'datas'
         ))->with('followupLabels', self::FOLLOWUP_LABELS);
     }
@@ -155,15 +166,18 @@ class RecentExpireController extends AppBaseController
 
         if ($request->has('followup_call') && $request->followup_call == 0) {
             $recentExpire->followup_call = 0;
-            $recentExpire->followup_note = null;
-            $recentExpire->followup_label = null; // Clear label when unchecking
+            $recentExpire->followup_note = ''; // Set to empty string instead of null
+            $recentExpire->followup_label = ''; // Set to empty string instead of null
         } else {
             $recentExpire->followup_call = 1;
             $recentExpire->followup_note = $request->followup_note ?? '';
-            $recentExpire->followup_label = $request->followup_label; // Save label
+            $recentExpire->followup_label = $request->followup_label ?? ''; // Save label with fallback
         }
         $recentExpire->emp_id = auth()->user()->id;
         $recentExpire->save();
+
+        // Broadcast followup change via WebSocket for real-time updates
+        WebSocketBroadcastController::broadcastTransactionFollowUpChanged($recentExpire);
 
         return response()->json([
             'success' => true,

@@ -17,7 +17,7 @@ use App\Models\Subscription;
 use App\Models\TransactionLog;
 use App\Models\User;
 use App\Models\UserData;
-use App\Models\PaymentConfiguration;
+use App\Models\Pricing\PaymentConfiguration;
 use App\Models\PurchaseHistory;
 use App\Services\PhonePeAutoPayService;
 use App\Services\PhonePeTokenService;
@@ -83,13 +83,13 @@ class OrderUserApiController extends AppBaseController
                 $user = auth('sanctum')->user();
                 if ($user) {
                     $isSalesEmployee = RoleManager::isSalesEmployee($user->user_type);
-                    
+
                     if ($isSalesEmployee) {
                         $userId = $user->id;
-                        $query->where(function($q) use ($userId) {
+                        $query->where(function ($q) use ($userId) {
                             $q->whereNull('emp_id')
-                              ->orWhere('emp_id', 0)
-                              ->orWhere('emp_id', $userId);
+                                ->orWhere('emp_id', 0)
+                                ->orWhere('emp_id', $userId);
                         });
                     }
                 }
@@ -196,26 +196,26 @@ class OrderUserApiController extends AppBaseController
             $sortBy = in_array($amountSort, ['asc', 'desc']) ? 'amount' : 'id';
             $sortOrder = $amountSort ?: 'desc';
             $query->orderBy($sortBy, $sortOrder);
-            
+
             // Pagination
             $perPage = $request->get('per_page', 15);
             $orders = $query->paginate($perPage);
 
             // Format response
-            $formattedOrders = $orders->map(function($order) {
+            $formattedOrders = $orders->map(function ($order) {
                 // Handle plan_items - it's a Collection of objects
                 $planItemsDisplay = '-';
                 try {
                     $planItems = $order->plan_items;
                     if ($planItems && $planItems->isNotEmpty()) {
                         // Extract string_id or id_name from each item
-                        $itemNames = $planItems->map(function($item) {
+                        $itemNames = $planItems->map(function ($item) {
                             if (is_object($item)) {
                                 return $item->string_id ?? $item->id_name ?? $item->id ?? null;
                             }
                             return $item;
                         })->filter()->toArray();
-                        
+
                         $planItemsDisplay = !empty($itemNames) ? implode(', ', $itemNames) : $order->plan_id ?? '-';
                     } else {
                         $planItemsDisplay = $order->plan_id ?? '-';
@@ -223,7 +223,7 @@ class OrderUserApiController extends AppBaseController
                 } catch (\Exception $e) {
                     $planItemsDisplay = $order->plan_id ?? '-';
                 }
-                
+
                 return [
                     'id' => $order->id,
                     'user_name' => $order->user?->name ?? '-',
@@ -234,6 +234,7 @@ class OrderUserApiController extends AppBaseController
                     'currency' => $order->currency ?? 'INR',
                     'type' => $order->type ?? '',
                     'plan_items' => $planItemsDisplay,
+                    'followBy' => RoleManager::getUploaderName($order->emp_id),
                     'status' => $order->status,
                     'is_subscription_active' => $order->isSubscriptionActive(),
                     'created_at' => $order->created_at->format('Y-m-d H:i:s'),
@@ -296,7 +297,7 @@ class OrderUserApiController extends AppBaseController
 
             // Get authenticated user from middleware
             $currentUser = $request->get('authenticated_user');
-            
+
             if (!$currentUser) {
                 return response()->json([
                     'success' => false,
@@ -305,7 +306,7 @@ class OrderUserApiController extends AppBaseController
             }
 
             $orderUser = Order::find($request->id);
-            
+
             if (!$orderUser) {
                 return response()->json([
                     'success' => false,
@@ -380,16 +381,16 @@ class OrderUserApiController extends AppBaseController
             }
 
             $order = Order::find($request->order_id);
-            
+
             if (!$order || !$order->user_id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Order or user not found'
                 ], 404);
             }
-            
+
             $personalDetails = PersonalDetails::where('uid', $order->user_id)->first();
-            
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -420,18 +421,18 @@ class OrderUserApiController extends AppBaseController
         try {
             $subscriptionType = $request->get('subscription_type', 'new_sub');
             $plans = [];
-            
+
             if ($subscriptionType === 'new_sub') {
                 $newPlans = SubPlan::where('deleted', 0)
                     ->with('plan')
                     ->orderBy('id', 'asc')
                     ->get();
-                
+
                 foreach ($newPlans as $subPlan) {
                     $planDetails = is_string($subPlan->plan_details) ? json_decode($subPlan->plan_details, true) : $subPlan->plan_details;
                     $planName = $subPlan->plan->name ?? 'Plan ' . $subPlan->id;
                     $planPrice = $planDetails['inr_offer_price'] ?? $planDetails['inr_price'] ?? 0;
-                    
+
                     $durationText = '';
                     if ($subPlan->duration_id == 1) {
                         $durationText = ' (Monthly)';
@@ -440,7 +441,7 @@ class OrderUserApiController extends AppBaseController
                     } elseif ($subPlan->duration_id == 3) {
                         $durationText = ' (Lifetime)';
                     }
-                    
+
                     $plans[] = [
                         'id' => $subPlan->string_id ?? $subPlan->id,
                         'name' => $planName . $durationText,
@@ -450,19 +451,19 @@ class OrderUserApiController extends AppBaseController
                         'plan_details' => $planDetails,
                     ];
                 }
-                
+
             } elseif ($subscriptionType === 'old_sub') {
                 $oldPlans = Subscription::where('status', 1)
                     ->orderBy('price', 'asc')
                     ->get();
-                
+
                 foreach ($oldPlans as $plan) {
                     $planName = $plan->package_name ?? $plan->desc ?? 'Plan ' . $plan->id;
-                    
+
                     if (strpos($planName, 'com.') === 0) {
                         $planName = ucwords(str_replace(['com.', '.'], ['', ' '], $planName));
                     }
-                    
+
                     $plans[] = [
                         'id' => $plan->id,
                         'name' => $planName . ' (' . $plan->validity . ' days)',
@@ -472,19 +473,19 @@ class OrderUserApiController extends AppBaseController
                     ];
                 }
             }
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $plans,
                 'subscription_type' => $subscriptionType
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Get Plans Error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error loading plans: ' . $e->getMessage()
@@ -513,7 +514,7 @@ class OrderUserApiController extends AppBaseController
 
             $email = $request->input('email');
             $user = UserData::where('email', $email)->first();
-            
+
             if (!$user) {
                 return response()->json([
                     'success' => true,
@@ -524,9 +525,9 @@ class OrderUserApiController extends AppBaseController
                     ]
                 ]);
             }
-            
+
             $isActive = ($user->status !== 0 && $user->status !== '0');
-            
+
             return response()->json([
                 'success' => true,
                 'message' => $isActive ? 'Email verified - User is active' : 'User account is inactive',
@@ -536,13 +537,13 @@ class OrderUserApiController extends AppBaseController
                     'user_id' => $user->id,
                 ]
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Email Validation Error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error validating email: ' . $e->getMessage()
@@ -579,30 +580,30 @@ class OrderUserApiController extends AppBaseController
             }
 
             $validated = $validator->validated();
-            
+
             // Validate email exists and user is active
             $user = UserData::where('email', $validated['email'])->first();
-            
+
             if (!$user) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Email not found in system. Please register first.'
                 ], 400);
             }
-            
+
             if ($user->status == 0 && $user->status !== null) {
                 return response()->json([
                     'success' => false,
                     'message' => 'User account is inactive. Please activate the account first.'
                 ], 400);
             }
-            
+
             // Get authenticated user (sales person) from middleware
             $currentUser = $request->get('authenticated_user');
-            
+
             // Generate reference ID
             $referenceId = Sale::generateReferenceId();
-            
+
             // Create sale record
             $sale = Sale::create([
                 'sales_person_id' => $currentUser ? $currentUser->id : 0,
@@ -619,12 +620,12 @@ class OrderUserApiController extends AppBaseController
                 'reference_id' => $referenceId,
                 'status' => 'created',
             ]);
-            
+
             // Create payment link
             $paymentLink = null;
             if ($validated['payment_method'] === 'razorpay') {
                 $paymentLink = $this->createRazorpayPaymentLink($sale);
-                
+
                 if ($paymentLink) {
                     $sale->update([
                         'payment_link_id' => $paymentLink['id'],
@@ -634,7 +635,7 @@ class OrderUserApiController extends AppBaseController
                 }
             } elseif ($validated['payment_method'] === 'phonepe') {
                 $paymentLink = $this->createPhonePePaymentLink($sale);
-                
+
                 if ($paymentLink) {
                     $sale->update([
                         'payment_link_id' => $paymentLink['id'],
@@ -644,7 +645,7 @@ class OrderUserApiController extends AppBaseController
                     ]);
                 }
             }
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Payment link created successfully',
@@ -655,13 +656,13 @@ class OrderUserApiController extends AppBaseController
                     'payment_method' => $sale->payment_method,
                 ]
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Create Payment Link Error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error creating payment link: ' . $e->getMessage()
@@ -682,9 +683,9 @@ class OrderUserApiController extends AppBaseController
                 ->whereIn('status', ['success', 'paid'])
                 ->orderBy('created_at', 'desc')
                 ->get()
-                ->map(function($order) {
+                ->map(function ($order) {
                     $paymentMethod = 'Completed';
-                    
+
                     $sale = Sale::where('order_id', $order->id)->first();
                     if ($sale && $sale->payment_method) {
                         $paymentMethod = ucfirst($sale->payment_method);
@@ -695,15 +696,15 @@ class OrderUserApiController extends AppBaseController
                             $paymentMethod = 'Stripe';
                         }
                     }
-                    
-                    $transactionId = $order->razorpay_payment_id 
-                        ?? $order->stripe_payment_intent_id 
-                        ?? $order->stripe_txn_id 
-                        ?? $order->crafty_id 
+
+                    $transactionId = $order->razorpay_payment_id
+                        ?? $order->stripe_payment_intent_id
+                        ?? $order->stripe_txn_id
+                        ?? $order->crafty_id
                         ?? '-';
-                    
+
                     $planItemsDisplay = '-';
-                    
+
                     if (in_array($order->type, ['template', 'video', 'caricature'])) {
                         $planItems = $order->plan_items;
                         if ($planItems && $planItems->isNotEmpty()) {
@@ -736,7 +737,7 @@ class OrderUserApiController extends AppBaseController
                     } else {
                         $planItemsDisplay = $order->plan_id ? $order->plan_id : 'Unknown';
                     }
-                    
+
                     return [
                         'id' => $order->id,
                         'amount' => $order->amount_with_symbol,
@@ -752,10 +753,10 @@ class OrderUserApiController extends AppBaseController
                         'contact_no' => $order->contact_no ?? $order->user?->contact_no ?? '',
                     ];
                 });
-            
+
             $recentOrders = $allOrders->take(10);
             $remainingCount = $allOrders->count() - 10;
-            
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -766,14 +767,14 @@ class OrderUserApiController extends AppBaseController
                     'remaining_count' => max(0, $remainingCount),
                 ]
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Purchase History Error', [
                 'user_id' => $userId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
@@ -789,7 +790,7 @@ class OrderUserApiController extends AppBaseController
     {
         try {
             $status = $this->checkPhonePePaymentStatus($merchantOrderId);
-            
+
             if ($status) {
                 return response()->json([
                     'success' => true,
@@ -808,7 +809,7 @@ class OrderUserApiController extends AppBaseController
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error checking payment status: ' . $e->getMessage(),
@@ -825,31 +826,31 @@ class OrderUserApiController extends AppBaseController
     {
         try {
             $credentials = $this->getPaymentCredentials('razorpay', 'NATIONAL');
-            
+
             if (!$credentials) {
                 throw new \Exception('Razorpay credentials not configured');
             }
 
             $razorpayKey = $credentials['key_id'] ?? null;
             $razorpaySecret = $credentials['secret_key'] ?? $credentials['key_secret'] ?? null;
-            
+
             if (!$razorpayKey || !$razorpaySecret) {
                 throw new \Exception('Razorpay credentials not configured');
             }
-            
+
             $url = 'https://api.razorpay.com/v1/payment_links/' . $paymentLinkId;
-            
+
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_USERPWD, $razorpayKey . ':' . $razorpaySecret);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Content-Type: application/json',
             ]);
-            
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-            
+
             if ($httpCode === 200) {
                 $data = json_decode($response, true);
                 return response()->json([
@@ -890,27 +891,27 @@ class OrderUserApiController extends AppBaseController
     {
         try {
             $lastId = $request->get('last_id', 0);
-            
+
             $newOrders = Order::with(['user'])
                 ->where('is_deleted', 0)
                 ->whereIn('status', ['failed', 'pending'])
                 ->where('id', '>', $lastId)
                 ->orderBy('id', 'desc')
                 ->get()
-                ->map(function($order) {
+                ->map(function ($order) {
                     // Handle plan_items - it's a Collection of objects
                     $planItemsDisplay = '-';
                     try {
                         $planItems = $order->plan_items;
                         if ($planItems && $planItems->isNotEmpty()) {
                             // Extract string_id or id_name from each item
-                            $itemNames = $planItems->map(function($item) {
+                            $itemNames = $planItems->map(function ($item) {
                                 if (is_object($item)) {
                                     return $item->string_id ?? $item->id_name ?? $item->id ?? null;
                                 }
                                 return $item;
                             })->filter()->toArray();
-                            
+
                             $planItemsDisplay = !empty($itemNames) ? implode(', ', $itemNames) : $order->plan_id ?? '-';
                         } else {
                             $planItemsDisplay = $order->plan_id ?? '-';
@@ -918,7 +919,7 @@ class OrderUserApiController extends AppBaseController
                     } catch (\Exception $e) {
                         $planItemsDisplay = $order->plan_id ?? '-';
                     }
-                    
+
                     return [
                         'id' => $order->id,
                         'user_name' => $order->user?->name ?? '-',
@@ -935,7 +936,7 @@ class OrderUserApiController extends AppBaseController
                         'from_where' => $order->from_where ?? '-',
                     ];
                 });
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $newOrders
@@ -981,26 +982,26 @@ class OrderUserApiController extends AppBaseController
             }
 
             $validated = $validator->validated();
-            
+
             // Get user by email
             $user = UserData::where('email', $validated['email'])->first();
-            
+
             if (!$user) {
                 return response()->json([
                     'success' => false,
                     'message' => 'User not found with this email. Please register first.'
                 ], 404);
             }
-            
+
             // Get authenticated user (sales person) from middleware
             $currentUser = $request->get('authenticated_user');
-            
+
             // Generate crafty_id
             $craftyId = Order::generateCraftyId();
-            
+
             // Generate unique razorpay_order_id (even though we're not using Razorpay)
             $razorpayOrderId = 'order_' . time() . rand(1000, 9999);
-            
+
             // Create order
             $order = Order::create([
                 'user_id' => $user->uid,
@@ -1022,7 +1023,7 @@ class OrderUserApiController extends AppBaseController
                 'whatsapp_template_count' => 0,
                 'followup_call' => 0,
             ]);
-            
+
             // Broadcast new order event
             try {
                 WebSocketBroadcastController::broadcastOrderCreatedDirect($order);
@@ -1033,7 +1034,7 @@ class OrderUserApiController extends AppBaseController
                     'error' => $e->getMessage()
                 ]);
             }
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Order created successfully',
@@ -1075,9 +1076,8 @@ class OrderUserApiController extends AppBaseController
     {
         $config = PaymentConfiguration::whereRaw('LOWER(gateway) = ?', [strtolower($gateway)])
             ->where('payment_scope', $scope)
-            ->where('is_active', 1)
             ->first();
-        
+
         if (!$config) {
             Log::warning("Payment configuration not found", [
                 'gateway' => $gateway,
@@ -1085,7 +1085,7 @@ class OrderUserApiController extends AppBaseController
             ]);
             return null;
         }
-        
+
         return $config->credentials;
     }
 
@@ -1096,20 +1096,20 @@ class OrderUserApiController extends AppBaseController
     {
         try {
             $credentials = $this->getPaymentCredentials('razorpay', 'NATIONAL');
-            
+
             if (!$credentials) {
                 throw new \Exception('Razorpay credentials not configured in payment_configurations');
             }
-            
+
             $razorpayKey = $credentials['key_id'] ?? null;
             $razorpaySecret = $credentials['secret_key'] ?? $credentials['key_secret'] ?? null;
-            
+
             if (!$razorpayKey || !$razorpaySecret) {
                 throw new \Exception('Razorpay credentials not configured');
             }
-            
+
             $url = 'https://api.razorpay.com/v1/payment_links';
-            
+
             $data = [
                 'amount' => $sale->amount * 100,
                 'currency' => 'INR',
@@ -1129,7 +1129,7 @@ class OrderUserApiController extends AppBaseController
                 'callback_url' => url('/payment-link/callback'),
                 'callback_method' => 'get',
             ];
-            
+
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_USERPWD, $razorpayKey . ':' . $razorpaySecret);
@@ -1138,11 +1138,11 @@ class OrderUserApiController extends AppBaseController
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Content-Type: application/json',
             ]);
-            
+
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-            
+
             if ($httpCode === 200) {
                 $result = json_decode($response, true);
                 return [
@@ -1153,16 +1153,16 @@ class OrderUserApiController extends AppBaseController
             } else {
                 $errorResponse = json_decode($response, true);
                 $errorMessage = $errorResponse['error']['description'] ?? 'Razorpay API Error';
-                
+
                 Log::error('Razorpay API Error', [
                     'http_code' => $httpCode,
                     'response' => $response,
                     'error_message' => $errorMessage
                 ]);
-                
+
                 throw new \Exception($errorMessage);
             }
-            
+
         } catch (\Exception $e) {
             Log::error('Razorpay Payment Link Creation Error', [
                 'error' => $e->getMessage()
@@ -1178,32 +1178,32 @@ class OrderUserApiController extends AppBaseController
     {
         try {
             $credentials = $this->getPaymentCredentials('phonepe', 'NATIONAL');
-            
+
             if (!$credentials) {
                 throw new \Exception('PhonePe credentials not configured in payment_configurations');
             }
-            
+
             $clientId = $credentials['client_id'] ?? null;
             $clientSecret = $credentials['client_secret'] ?? null;
             $merchantUserId = $credentials['merchant_user_id'] ?? $credentials['merchant_id'] ?? null;
             $environment = $credentials['environment'] ?? 'sandbox';
-            
+
             if (!$clientId || !$clientSecret) {
                 throw new \Exception('PhonePe client_id and client_secret are required');
             }
-            
+
             // Get OAuth token
             $token = $this->getPhonePeOAuthToken($clientId, $clientSecret);
-            
+
             $merchantOrderId = 'TX' . time() . rand(100000, 999999);
             $merchantSubscriptionId = 'MS' . time() . rand(100000, 999999);
             $baseUrl = url('/');
             $callbackUrl = $baseUrl . '/payment-link/phonepe-callback?ref=' . $sale->reference_id;
-            
+
             // PhonePe OAuth API payload for one-time payment
             $payload = [
                 'merchantOrderId' => $merchantOrderId,
-                'amount' => (int)($sale->amount * 100), // Amount in paise
+                'amount' => (int) ($sale->amount * 100), // Amount in paise
                 'expireAt' => now()->addMinutes(30)->timestamp * 1000,
                 'metaInfo' => [
                     'udf1' => $sale->email,
@@ -1215,8 +1215,8 @@ class OrderUserApiController extends AppBaseController
                     'merchantSubscriptionId' => $merchantSubscriptionId,
                     'authWorkflowType' => 'TRANSACTION',
                     'amountType' => 'FIXED',
-                    'maxAmount' => (int)($sale->amount * 100),
-                    'recurringAmount' => (int)($sale->amount * 100),
+                    'maxAmount' => (int) ($sale->amount * 100),
+                    'recurringAmount' => (int) ($sale->amount * 100),
                     'frequency' => 'MONTHLY',
                     'expireAt' => now()->addYears(1)->timestamp * 1000,
                     'paymentMode' => [
@@ -1231,33 +1231,33 @@ class OrderUserApiController extends AppBaseController
                     'deviceOS' => 'ANDROID'
                 ]
             ];
-            
+
             // API URL based on environment
             $apiUrl = ($environment === 'production')
                 ? 'https://api.phonepe.com/apis/pg/subscriptions/v2/setup'
                 : 'https://api.phonepe.com/apis/pg/subscriptions/v2/setup';
-            
+
             Log::info('PhonePe Payment Link Request (OAuth)', [
                 'merchant_order_id' => $merchantOrderId,
                 'amount' => $sale->amount,
                 'api_url' => $apiUrl,
                 'payload' => $payload
             ]);
-            
+
             $response = \Http::withHeaders([
                 'Authorization' => 'O-Bearer ' . $token,
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json'
             ])->post($apiUrl, $payload);
-            
+
             $httpCode = $response->status();
             $responseData = $response->json();
-            
+
             Log::info('PhonePe Payment Link Response (OAuth)', [
                 'http_code' => $httpCode,
                 'response' => $responseData
             ]);
-            
+
             // Check for success response
             if ($httpCode === 200 && isset($responseData['orderId'])) {
                 // For OAuth API, we need to construct the payment URL
@@ -1274,16 +1274,16 @@ class OrderUserApiController extends AppBaseController
             } else {
                 $errorMessage = $responseData['message'] ?? $responseData['error'] ?? 'PhonePe API error';
                 $errorCode = $responseData['code'] ?? $responseData['errorCode'] ?? 'UNKNOWN';
-                
+
                 Log::error('PhonePe API Error (OAuth)', [
                     'error_code' => $errorCode,
                     'error_message' => $errorMessage,
                     'full_response' => $responseData
                 ]);
-                
+
                 throw new \Exception("PhonePe Error [{$errorCode}]: {$errorMessage}");
             }
-            
+
         } catch (\Exception $e) {
             Log::error('PhonePe Payment Link Creation Error', [
                 'error' => $e->getMessage(),
@@ -1294,7 +1294,7 @@ class OrderUserApiController extends AppBaseController
             throw $e;
         }
     }
-    
+
     /**
      * Get PhonePe OAuth access token
      */
@@ -1306,21 +1306,21 @@ class OrderUserApiController extends AppBaseController
             Log::info('Using cached PhonePe OAuth token');
             return $cachedToken;
         }
-        
+
         // Generate new token
         $tokenUrl = 'https://api.phonepe.com/apis/identity-manager/v1/oauth/token';
-        
+
         Log::info('Generating new PhonePe OAuth token');
-        
+
         $response = \Http::asForm()->post($tokenUrl, [
             'client_id' => $clientId,
             'client_secret' => $clientSecret,
             'client_version' => '1',
             'grant_type' => 'client_credentials',
         ]);
-        
+
         $data = $response->json();
-        
+
         if (!isset($data['access_token'])) {
             Log::error('PhonePe OAuth Token Generation Failed', [
                 'response' => $data,
@@ -1328,17 +1328,17 @@ class OrderUserApiController extends AppBaseController
             ]);
             throw new \Exception('PhonePe OAuth failed: ' . json_encode($data));
         }
-        
+
         $accessToken = $data['access_token'];
         $expiresIn = $data['expires_in'] ?? 3600;
-        
+
         // Cache token for 55 minutes (5 minutes before expiry)
         \Cache::put('phonepe_oauth_token', $accessToken, ($expiresIn - 300));
-        
+
         Log::info('New PhonePe OAuth token generated', [
             'expires_in' => $expiresIn
         ]);
-        
+
         return $accessToken;
     }
 
@@ -1349,69 +1349,69 @@ class OrderUserApiController extends AppBaseController
     {
         try {
             $credentials = $this->getPaymentCredentials('phonepe', 'NATIONAL');
-            
+
             if (!$credentials) {
                 Log::warning('PhonePe credentials not found', [
                     'merchant_transaction_id' => $merchantTransactionId
                 ]);
                 return null;
             }
-            
+
             $merchantId = $credentials['merchant_id'] ?? null;
             $env = $credentials['environment'] ?? 'uat';
-            
+
             if (!$merchantId) {
                 Log::warning('PhonePe merchant_id not configured', [
                     'merchant_transaction_id' => $merchantTransactionId
                 ]);
                 return null;
             }
-            
+
             $tokenService = app(PhonePeTokenService::class);
             $token = $tokenService->getAccessToken();
-            
+
             if (!$token) {
                 Log::warning('Failed to get PhonePe access token', [
                     'merchant_transaction_id' => $merchantTransactionId
                 ]);
                 return null;
             }
-            
-            $statusUrl = ($env === 'production') 
+
+            $statusUrl = ($env === 'production')
                 ? "https://api.phonepe.com/apis/pg/checkout/v2/order/{$merchantTransactionId}/status"
                 : "https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/order/{$merchantTransactionId}/status";
-            
+
             Log::info('Checking PhonePe payment status', [
                 'merchant_transaction_id' => $merchantTransactionId,
                 'url' => $statusUrl,
                 'environment' => $env
             ]);
-            
+
             $response = \Http::withHeaders([
                 'Authorization' => 'O-Bearer ' . $token,
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json'
             ])->get($statusUrl);
-            
+
             $httpCode = $response->status();
             $responseBody = $response->body();
-            
+
             Log::info('PhonePe status check response', [
                 'merchant_transaction_id' => $merchantTransactionId,
                 'http_code' => $httpCode,
                 'response' => $responseBody
             ]);
-            
+
             // Parse response even if not successful to get error details
             $statusData = $response->json();
-            
+
             // Check if order not found
             if ($httpCode === 400 && isset($statusData['code']) && $statusData['code'] === 'ORDER_NOT_FOUND') {
                 Log::warning('PhonePe Order Not Found', [
                     'merchant_transaction_id' => $merchantTransactionId,
                     'message' => $statusData['message'] ?? 'Order not found'
                 ]);
-                
+
                 return [
                     'success' => false,
                     'state' => 'NOT_FOUND',
@@ -1420,7 +1420,7 @@ class OrderUserApiController extends AppBaseController
                     'error_code' => $statusData['code'] ?? 'ORDER_NOT_FOUND',
                 ];
             }
-            
+
             if (!$response->successful()) {
                 Log::warning('PhonePe Status Check Failed', [
                     'merchant_transaction_id' => $merchantTransactionId,
@@ -1429,12 +1429,12 @@ class OrderUserApiController extends AppBaseController
                 ]);
                 return null;
             }
-            
+
             $orderId = $statusData['orderId'] ?? null;
             $state = $statusData['state'] ?? 'UNKNOWN';
             $amount = $statusData['amount'] ?? null;
             $currency = $statusData['currency'] ?? 'INR';
-            
+
             return [
                 'success' => ($state === 'COMPLETED'),
                 'state' => $state,
@@ -1444,7 +1444,7 @@ class OrderUserApiController extends AppBaseController
                 'payment_details' => $statusData['paymentDetails'] ?? [],
                 'full_response' => $statusData,
             ];
-            
+
         } catch (\Exception $e) {
             Log::error('PhonePe Status Check Error', [
                 'merchant_transaction_id' => $merchantTransactionId,
@@ -1489,7 +1489,7 @@ class OrderUserApiController extends AppBaseController
 
             // Find user by email
             $user = UserData::where('email', $validated['email'])->first();
-            
+
             if (!$user) {
                 return response()->json([
                     'success' => false,
@@ -1531,7 +1531,7 @@ class OrderUserApiController extends AppBaseController
             $transactionLog->from_where = $validated['fromWhere'] ?? 'Manual';
             $transactionLog->transaction_id = $validated['transaction_id'];
             $transactionLog->promo_code_id = 0;
-            
+
             // Set default values for required fields
             $transactionLog->cancellation_reason = '';
             $transactionLog->url = '';
