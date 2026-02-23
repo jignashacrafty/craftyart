@@ -207,18 +207,14 @@
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 {{ session('success') }}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
 
         @if(session('error'))
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 {{ session('error') }}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
 
@@ -279,18 +275,18 @@
                                 </td>
                                 <td>{{ $application->created_at->format('d M Y') }}</td>
                                 <td class="actions-cell">
-                                    <button type="button" class="btn-action btn-info-action" data-toggle="modal"
-                                        data-target="#viewModal{{ $application->id }}">
+                                    <button type="button" class="btn-action btn-info-action" data-bs-toggle="modal"
+                                        data-bs-target="#viewModal{{ $application->id }}">
                                         <i class="fa fa-eye"></i> View
                                     </button>
 
                                     @if($application->status == 'pending')
-                                        <button type="button" class="btn-action btn-success-action" data-toggle="modal"
-                                            data-target="#approveModal{{ $application->id }}">
+                                        <button type="button" class="btn-action btn-success-action" data-bs-toggle="modal"
+                                            data-bs-target="#approveModal{{ $application->id }}">
                                             <i class="fa fa-check"></i> Approve
                                         </button>
-                                        <button type="button" class="btn-action btn-danger-action" data-toggle="modal"
-                                            data-target="#rejectModal{{ $application->id }}">
+                                        <button type="button" class="btn-action btn-danger-action" data-bs-toggle="modal"
+                                            data-bs-target="#rejectModal{{ $application->id }}">
                                             <i class="fa fa-times"></i> Reject
                                         </button>
                                     @endif
@@ -298,13 +294,15 @@
                             </tr>
 
                             <!-- View Modal -->
-                            <div class="modal fade" id="viewModal{{ $application->id }}" tabindex="-1" role="dialog">
+                            <div class="modal fade" id="viewModal{{ $application->id }}" tabindex="-1" role="dialog"
+                                aria-labelledby="viewModalLabel{{ $application->id }}" aria-hidden="true">
                                 <div class="modal-dialog modal-lg" role="document">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h5 class="modal-title">Application Details - {{ $application->name }}</h5>
-                                            <button type="button" class="close" data-dismiss="modal">
-                                                <span>&times;</span>
+                                            <h5 class="modal-title" id="viewModalLabel{{ $application->id }}">Application
+                                                Details - {{ $application->name }}</h5>
+                                            <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
                                             </button>
                                         </div>
                                         <div class="modal-body">
@@ -397,15 +395,26 @@
                                                     <p><strong>Reviewed At:</strong>
                                                         {{ $application->reviewed_at ? $application->reviewed_at->format('d M Y, h:i A') : 'N/A' }}
                                                     </p>
-                                                    @if($application->status == 'rejected' && $application->rejection_reason)
-                                                        <div class="alert alert-danger mt-3">
+
+                                                    @if($application->status == 'rejected')
+                                                        <div class="alert alert-danger" style="margin-top: 15px; margin-bottom: 0;">
                                                             <strong><i class="fa fa-exclamation-circle"></i> Rejection
                                                                 Reason:</strong>
-                                                            <p class="mb-0 mt-2">{{ $application->rejection_reason }}</p>
+                                                            <p style="margin-bottom: 0; margin-top: 10px;">
+                                                                @if($application->rejection_reason)
+                                                                    {{ $application->rejection_reason }}
+                                                                @else
+                                                                    <em class="text-muted">No rejection reason provided</em>
+                                                                @endif
+                                                            </p>
                                                         </div>
                                                     @endif
                                                 </div>
                                             @endif
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary"
+                                                data-bs-dismiss="modal">Close</button>
                                         </div>
                                     </div>
                                 </div>
@@ -413,16 +422,19 @@
 
                             <!-- Approve Modal -->
                             @if($application->status == 'pending')
-                                <div class="modal fade" id="approveModal{{ $application->id }}" tabindex="-1" role="dialog">
+                                <div class="modal fade" id="approveModal{{ $application->id }}" tabindex="-1" role="dialog"
+                                    aria-labelledby="approveModalLabel{{ $application->id }}" aria-hidden="true">
                                     <div class="modal-dialog" role="document">
                                         <div class="modal-content">
                                             <form method="POST"
                                                 action="{{ route('designer_system.application.approve', $application->id) }}">
                                                 @csrf
                                                 <div class="modal-header">
-                                                    <h5 class="modal-title">Approve Application</h5>
-                                                    <button type="button" class="close" data-dismiss="modal">
-                                                        <span>&times;</span>
+                                                    <h5 class="modal-title" id="approveModalLabel{{ $application->id }}">Approve
+                                                        Application</h5>
+                                                    <button type="button" class="close" data-bs-dismiss="modal"
+                                                        aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
                                                     </button>
                                                 </div>
                                                 <div class="modal-body">
@@ -441,7 +453,7 @@
                                                 </div>
                                                 <div class="modal-footer">
                                                     <button type="button" class="btn btn-secondary"
-                                                        data-dismiss="modal">Cancel</button>
+                                                        data-bs-dismiss="modal">Cancel</button>
                                                     <button type="submit" class="btn btn-success">Approve</button>
                                                 </div>
                                             </form>
@@ -450,16 +462,19 @@
                                 </div>
 
                                 <!-- Reject Modal -->
-                                <div class="modal fade" id="rejectModal{{ $application->id }}" tabindex="-1" role="dialog">
+                                <div class="modal fade" id="rejectModal{{ $application->id }}" tabindex="-1" role="dialog"
+                                    aria-labelledby="rejectModalLabel{{ $application->id }}" aria-hidden="true">
                                     <div class="modal-dialog" role="document">
                                         <div class="modal-content">
                                             <form method="POST"
                                                 action="{{ route('designer_system.application.reject', $application->id) }}">
                                                 @csrf
                                                 <div class="modal-header">
-                                                    <h5 class="modal-title">Reject Application</h5>
-                                                    <button type="button" class="close" data-dismiss="modal">
-                                                        <span>&times;</span>
+                                                    <h5 class="modal-title" id="rejectModalLabel{{ $application->id }}">Reject
+                                                        Application</h5>
+                                                    <button type="button" class="close" data-bs-dismiss="modal"
+                                                        aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
                                                     </button>
                                                 </div>
                                                 <div class="modal-body">
@@ -480,7 +495,7 @@
                                                 </div>
                                                 <div class="modal-footer">
                                                     <button type="button" class="btn btn-secondary"
-                                                        data-dismiss="modal">Cancel</button>
+                                                        data-bs-dismiss="modal">Cancel</button>
                                                     <button type="submit" class="btn btn-danger">Reject</button>
                                                 </div>
                                             </form>
@@ -672,7 +687,7 @@
                     type === 'warning' ? 'alert-warning' : 'alert-danger';
 
             const alertHtml = `
-            <div class="alert ${alertClass} alert-dismissible fade show" role="alert" style="position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 300px;">
+            <div class="alert ${alertClass} alert-dismissible fade show notification-alert" role="alert" style="position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 300px;">
                 <strong>${title}:</strong> ${message}
                 <button type="button" class="close" data-dismiss="alert">
                     <span>&times;</span>
@@ -682,9 +697,9 @@
 
             document.body.insertAdjacentHTML('beforeend', alertHtml);
 
-            // Auto dismiss after 5 seconds
+            // Auto dismiss after 5 seconds - ONLY notification alerts
             setTimeout(() => {
-                const alerts = document.querySelectorAll('.alert');
+                const alerts = document.querySelectorAll('.alert.notification-alert');
                 alerts.forEach(alert => {
                     if (alert.textContent.includes(title)) {
                         alert.remove();
@@ -719,4 +734,157 @@
     }
 </style>
 
+<script>
+    // Modal Backdrop Fix - Bootstrap 5 Compatible
+    (function () {
+        console.log('Loading Bootstrap 5 modal backdrop fix...');
+
+        // Force cleanup function
+        function forceCleanup() {
+            // Only cleanup if no modals are currently open
+            const openModals = document.querySelectorAll('.modal.show');
+            if (openModals.length > 0) {
+                console.log('Modal is open, skipping cleanup');
+                return;
+            }
+
+            console.log('Running cleanup...');
+
+            // Remove ALL backdrops
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            console.log('Found ' + backdrops.length + ' backdrops to remove');
+            backdrops.forEach(function (backdrop) {
+                backdrop.remove();
+            });
+
+            // Remove modal-open class
+            document.body.classList.remove('modal-open');
+
+            // Reset body styles
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+
+            console.log('Cleanup complete');
+        }
+
+        // Wait for page to fully load before initial cleanup
+        window.addEventListener('load', function () {
+            setTimeout(forceCleanup, 500);
+        });
+
+        // Listen for Bootstrap 5 modal events
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.modal').forEach(function (modalElement) {
+                // When modal is completely hidden
+                modalElement.addEventListener('hidden.bs.modal', function () {
+                    console.log('Bootstrap 5: Modal hidden event - cleaning up');
+                    setTimeout(forceCleanup, 100);
+                    setTimeout(forceCleanup, 400);
+                });
+
+                // When modal is shown
+                modalElement.addEventListener('shown.bs.modal', function () {
+                    console.log('Bootstrap 5: Modal shown successfully');
+                });
+
+                // Debug: Log when modal is about to show
+                modalElement.addEventListener('show.bs.modal', function () {
+                    console.log('Bootstrap 5: Modal is about to show');
+                });
+            });
+        });
+
+        // Monitor for modal close attempts (Bootstrap 5 uses data-bs-dismiss)
+        document.addEventListener('click', function (e) {
+            const target = e.target;
+
+            // Check if it's a close button or backdrop (Bootstrap 5)
+            if (target.matches('[data-bs-dismiss="modal"]') ||
+                target.closest('[data-bs-dismiss="modal"]') ||
+                target.matches('.btn-close') ||
+                target.matches('.close')) {
+
+                console.log('Close button clicked - scheduling cleanup');
+
+                // Cleanup after Bootstrap animation completes
+                setTimeout(forceCleanup, 400);
+                setTimeout(forceCleanup, 800);
+            }
+        });
+
+        // ESC key handler
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' || e.keyCode === 27) {
+                console.log('ESC pressed - scheduling cleanup');
+                setTimeout(forceCleanup, 400);
+                setTimeout(forceCleanup, 800);
+            }
+        });
+
+        // Periodic cleanup check (every 3 seconds) - only if no modals are open
+        setInterval(function () {
+            const openModals = document.querySelectorAll('.modal.show');
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+
+            if (openModals.length === 0 && backdrops.length > 0) {
+                console.log('Periodic check: Found orphaned backdrops');
+                forceCleanup();
+            }
+        }, 3000);
+
+        console.log('Bootstrap 5 modal backdrop fix initialized');
+    })();
+</script>
+
 @include('layouts.footer')
+
+<script>
+    // Simple debug script to test if modals work
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('=== MODAL DEBUG START ===');
+        console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
+        console.log('jQuery available:', typeof $ !== 'undefined');
+
+        // Count modals and buttons
+        const modals = document.querySelectorAll('.modal');
+        const buttons = document.querySelectorAll('[data-bs-toggle="modal"]');
+        console.log('Found', modals.length, 'modals');
+        console.log('Found', buttons.length, 'modal trigger buttons');
+
+        // Test modal trigger clicks
+        buttons.forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                console.log('✅ Modal button clicked!', this.getAttribute('data-bs-target'));
+            });
+        });
+
+        // Listen for Bootstrap modal events
+        modals.forEach(function (modal) {
+            modal.addEventListener('show.bs.modal', function () {
+                console.log('🔓 Modal opening:', this.id);
+            });
+
+            modal.addEventListener('shown.bs.modal', function () {
+                console.log('✅ Modal opened:', this.id);
+            });
+
+            modal.addEventListener('hidden.bs.modal', function () {
+                console.log('🚪 Modal closed:', this.id);
+
+                // Simple cleanup after modal closes
+                setTimeout(function () {
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    backdrops.forEach(function (backdrop) {
+                        backdrop.remove();
+                    });
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = '';
+                    document.body.style.paddingRight = '';
+                    console.log('🧹 Cleaned up backdrops');
+                }, 300);
+            });
+        });
+
+        console.log('=== MODAL DEBUG END ===');
+    });
+</script>

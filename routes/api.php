@@ -23,7 +23,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
-
 use App\Http\Controllers\Api\CategoryApiController;
 use App\Http\Controllers\Api\CategoryTemplatesApiController;
 use App\Http\Controllers\Api\Colors\ColorAPIController;
@@ -38,6 +37,8 @@ use App\Http\Controllers\Api\TemplateApiController;
 use App\Http\Controllers\Api\Theme\ThemeAPIController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\VirtualCategoryController;
+use App\Http\Controllers\Revenue\RevenueController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -601,3 +602,12 @@ Route::prefix('payment')->group(function () {
     Route::any('razorpay-webhook', [App\Http\Controllers\Api\SimplePaymentController::class, 'razorpayWebhook']);
     Route::any('phonepe-webhook', [App\Http\Controllers\Api\SimplePaymentController::class, 'phonePeWebhook']);
 });
+
+
+Route::post('revenue/login', [RevenueController::class, 'login']);
+Route::post('revenue/', [RevenueController::class, 'index']);
+Route::post('revenue/logs', [RevenueController::class, 'logs']);
+Route::post('revenue/analytics', [RevenueController::class, 'analytics']);
+Route::post('revenue/e_mandates', [RevenueController::class, 'e_mandates']);
+Route::post('revenue/new_subs', [RevenueController::class, 'new_subs']);
+Route::post('revenue/top_users', [RevenueController::class, 'top_users']);

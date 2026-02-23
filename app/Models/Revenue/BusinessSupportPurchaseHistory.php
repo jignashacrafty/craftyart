@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Revenue;
 
+use App\Models\UserData;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -10,7 +11,7 @@ class BusinessSupportPurchaseHistory extends Model
   use HasFactory;
 
   protected $table = 'business_support_purchase_history';
-  protected $connection = 'crafty_revenue';
+  protected $connection = 'crafty_revenue_mysql';
 
   protected $fillable = [
     'user_id',

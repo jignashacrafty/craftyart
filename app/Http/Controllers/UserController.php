@@ -786,7 +786,7 @@ class UserController extends Controller
 
         return response()->stream($callback, 200, $headers);
     }
-    
+
     /**
      * Show personal details modal
      */
@@ -794,9 +794,9 @@ class UserController extends Controller
     {
         try {
             \Log::info('Fetching personal details for UID: ' . $uid);
-            
+
             $user = UserData::where('uid', $uid)->first();
-            
+
             if (!$user) {
                 \Log::warning('User not found for UID: ' . $uid);
                 return response()->json([
@@ -804,9 +804,9 @@ class UserController extends Controller
                     'message' => 'User not found'
                 ], 404);
             }
-            
+
             $personalDetails = \App\Models\PersonalDetails::where('uid', $uid)->first();
-            
+
             // Try to get brand kit
             $brandKit = null;
             try {
@@ -814,25 +814,25 @@ class UserController extends Controller
             } catch (\Exception $e) {
                 \Log::warning('Brand kit fetch error: ' . $e->getMessage());
             }
-            
+
             // Get usage type from latest sale
             $latestSale = null;
             try {
-                $latestSale = \App\Models\Sale::where('email', $user->email)
+                $latestSale = \App\Models\Revenue\Sale::where('email', $user->email)
                     ->orWhere('contact_no', $user->number)
                     ->orderBy('created_at', 'desc')
                     ->first();
             } catch (\Exception $e) {
                 \Log::warning('Sale fetch error: ' . $e->getMessage());
             }
-            
+
             \Log::info('Personal details fetched successfully', [
                 'uid' => $uid,
                 'has_personal_details' => !is_null($personalDetails),
                 'has_brand_kit' => !is_null($brandKit),
                 'has_sale' => !is_null($latestSale)
             ]);
-            
+
             return response()->json([
                 'success' => true,
                 'user' => $user,
@@ -846,14 +846,14 @@ class UserController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
             ], 500);
         }
     }
-    
+
     /**
      * Update personal details
      */
@@ -863,9 +863,9 @@ class UserController extends Controller
             \Log::info('Updating personal details for UID: ' . $uid, [
                 'request_data' => $request->all()
             ]);
-            
+
             $user = UserData::where('uid', $uid)->firstOrFail();
-            
+
             // Update or create personal details
             $personalDetails = \App\Models\PersonalDetails::updateOrCreate(
                 ['uid' => $uid],
@@ -883,9 +883,9 @@ class UserController extends Controller
                     'language' => $request->language,
                 ]
             );
-            
+
             \Log::info('Personal details saved', ['personal_details' => $personalDetails]);
-            
+
             // Update or create brand kit for website and role
             if ($request->has('website') || $request->has('role') || $request->has('usage')) {
                 \Log::info('Updating brand kit', [
@@ -893,7 +893,7 @@ class UserController extends Controller
                     'role' => $request->role,
                     'usage' => $request->usage
                 ]);
-                
+
                 $brandKit = \App\Models\BrandKit::updateOrCreate(
                     ['user_id' => $uid],
                     [
@@ -902,10 +902,10 @@ class UserController extends Controller
                         'usage' => $request->usage,
                     ]
                 );
-                
+
                 \Log::info('Brand kit saved', ['brand_kit' => $brandKit]);
             }
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Personal details updated successfully',
@@ -917,7 +917,7 @@ class UserController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()

@@ -13,7 +13,7 @@ class AddCaricatureToSalesTable extends Migration
      */
     public function up()
     {
-        Schema::connection('crafty_revenue')->table('sales', function (Blueprint $table) {
+        Schema::connection('crafty_revenue_mysql')->table('sales', function (Blueprint $table) {
             $table->unsignedTinyInteger('caricature')->default(0)->after('plan_type');
         });
     }
@@ -25,7 +25,7 @@ class AddCaricatureToSalesTable extends Migration
      */
     public function down()
     {
-        Schema::connection('crafty_revenue')->table('sales', function (Blueprint $table) {
+        Schema::connection('crafty_revenue_mysql')->table('sales', function (Blueprint $table) {
             $table->dropColumn('caricature');
         });
     }

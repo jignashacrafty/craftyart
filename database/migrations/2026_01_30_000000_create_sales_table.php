@@ -4,14 +4,13 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        Schema::connection('crafty_revenue')->create('sales', function (Blueprint $table) {
+        Schema::connection('crafty_revenue_mysql')->create('sales', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('sales_person_id');
             $table->string('user_name');
@@ -30,7 +29,7 @@ return new class extends Migration
             $table->unsignedBigInteger('order_id')->nullable(); // Link to orders table after payment
             $table->timestamp('paid_at')->nullable();
             $table->timestamps();
-            
+
             $table->index('sales_person_id');
             $table->index('reference_id');
             $table->index('status');
@@ -42,6 +41,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::connection('crafty_revenue')->dropIfExists('sales');
+        Schema::connection('crafty_revenue_mysql')->dropIfExists('sales');
     }
 };

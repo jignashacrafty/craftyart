@@ -10,7 +10,7 @@ return new class extends Migration {
    */
   public function up(): void
   {
-    Schema::connection('crafty_revenue')->table('business_support_purchase_history', function (Blueprint $table) {
+    Schema::connection('crafty_revenue_mysql')->table('business_support_purchase_history', function (Blueprint $table) {
       $table->text('description')->nullable()->after('status');
     });
   }
@@ -20,7 +20,7 @@ return new class extends Migration {
    */
   public function down(): void
   {
-    Schema::connection('crafty_revenue')->table('business_support_purchase_history', function (Blueprint $table) {
+    Schema::connection('crafty_revenue_mysql')->table('business_support_purchase_history', function (Blueprint $table) {
       $table->dropColumn('description');
     });
   }

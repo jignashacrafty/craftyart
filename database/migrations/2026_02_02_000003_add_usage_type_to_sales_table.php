@@ -13,7 +13,7 @@ class AddUsageTypeToSalesTable extends Migration
      */
     public function up()
     {
-        Schema::connection('crafty_revenue')->table('sales', function (Blueprint $table) {
+        Schema::connection('crafty_revenue_mysql')->table('sales', function (Blueprint $table) {
             $table->string('usage_type')->nullable()->after('plan_type')->comment('personal or professional');
         });
     }
@@ -25,7 +25,7 @@ class AddUsageTypeToSalesTable extends Migration
      */
     public function down()
     {
-        Schema::connection('crafty_revenue')->table('sales', function (Blueprint $table) {
+        Schema::connection('crafty_revenue_mysql')->table('sales', function (Blueprint $table) {
             $table->dropColumn('usage_type');
         });
     }

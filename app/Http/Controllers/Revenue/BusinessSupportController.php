@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Revenue;
 
-use App\Models\BusinessSupportPurchaseHistory;
+use App\Http\Controllers\AppBaseController;
+use App\Models\Revenue\BusinessSupportPurchaseHistory;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -58,7 +59,7 @@ class BusinessSupportController extends AppBaseController
     $data['count_str'] = $ccc;
     $data['transcationArray'] = $temp_data;
 
-    return view('subscription/show_ai_credit_purchases')->with('datas', $data);
+    return view('revenue.business_support.index')->with('datas', $data);
   }
 
   /**
@@ -77,4 +78,3 @@ class BusinessSupportController extends AppBaseController
     ]);
   }
 }
-

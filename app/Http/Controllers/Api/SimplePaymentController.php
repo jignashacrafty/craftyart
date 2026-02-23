@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Pricing\PaymentConfiguration;
-use App\Models\Sale;
+use App\Models\Revenue\Sale;
 use App\Services\PhonePeTokenService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -63,7 +63,7 @@ class SimplePaymentController extends Controller
             ]);
 
             $paymentLink = null;
-            
+
             if ($paymentMethod === 'razorpay') {
                 $paymentLink = $this->createRazorpayPaymentLink($sale, $description);
             } elseif ($paymentMethod === 'phonepe') {
@@ -239,12 +239,12 @@ class SimplePaymentController extends Controller
             } else {
                 $errorResponse = json_decode($response, true);
                 $errorMessage = $errorResponse['error']['description'] ?? 'Razorpay API Error';
-                
+
                 Log::error('Razorpay API Error', [
                     'http_code' => $httpCode,
                     'response' => $response
                 ]);
-                
+
                 throw new \Exception($errorMessage);
             }
 
@@ -285,7 +285,7 @@ class SimplePaymentController extends Controller
                 'merchantId' => $merchantId,
                 'merchantOrderId' => $merchantOrderId,
                 'merchantUserId' => $merchantId,
-                'amount' => (int)($sale->amount * 100),
+                'amount' => (int) ($sale->amount * 100),
                 'paymentFlow' => [
                     'type' => 'PG_CHECKOUT',
                     'message' => $description,
@@ -358,9 +358,9 @@ class SimplePaymentController extends Controller
                 'all_params' => $request->all()
             ]);
 
-            $referenceId = $request->get('reference_id') 
-                        ?? $request->get('razorpay_payment_link_reference_id')
-                        ?? null;
+            $referenceId = $request->get('reference_id')
+                ?? $request->get('razorpay_payment_link_reference_id')
+                ?? null;
 
             $paymentId = $request->get('razorpay_payment_id');
             $paymentLinkId = $request->get('razorpay_payment_link_id');

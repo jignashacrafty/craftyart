@@ -98,7 +98,7 @@ class BusinessSupportPurchaseHistorySeeder extends Seeder
       ],
     ];
 
-    DB::connection('crafty_revenue')->table('business_support_purchase_history')->insert($entries);
+    DB::connection('crafty_revenue_mysql')->table('business_support_purchase_history')->insert($entries);
 
     $this->command->info('5 fake entries added to business_support_purchase_history table successfully!');
   }

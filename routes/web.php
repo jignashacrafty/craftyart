@@ -2,7 +2,8 @@
 
 use App\Http\Controllers\AI\AiCreditTransactionController;
 use App\Http\Controllers\AiCreditController;
-use App\Http\Controllers\BusinessSupportController;
+use App\Http\Controllers\Revenue\BusinessSupportController;
+use App\Http\Controllers\Revenue\SaleController;
 use App\Http\Controllers\Api\DownloadController;
 use App\Http\Controllers\AppCategoryController;
 use App\Http\Controllers\AudioCategoryController;
@@ -364,8 +365,14 @@ Route::get('transcation_logs', [SubscriptionController::class, 'showTranscation'
 Route::get('purchases', [SubscriptionController::class, 'showPurchases'])->name('purchases')->middleware(IsAdmin::class);
 
 Route::get('credit_transaction_logs', [AiCreditTransactionController::class, 'index'])->name('credit_transaction_logs')->middleware(IsAdmin::class);
+
+// Revenue Module Routes
 Route::get('business_support_purchases', [BusinessSupportController::class, 'showBusinessSupport'])->name('business_support_purchases')->middleware(IsSalesManagerAccess::class);
 Route::post('business_support_purchases/followup', [BusinessSupportController::class, 'updateFollowup'])->name('business_support.followup')->middleware(IsSalesManagerAccess::class);
+
+Route::get('revenue/sales', [SaleController::class, 'index'])->name('revenue.sales.index')->middleware(IsSalesManagerAccess::class);
+Route::get('revenue/sales/{id}', [SaleController::class, 'show'])->name('revenue.sales.show')->middleware(IsSalesManagerAccess::class);
+Route::get('revenue/sales/statistics', [SaleController::class, 'statistics'])->name('revenue.sales.statistics')->middleware(IsSalesManagerAccess::class);
 
 Route::any('transactions/refund', [SubscriptionController::class, 'processRefund'])->name('transactions.refund')->middleware(IsAdmin::class);
 

@@ -12,7 +12,7 @@ use App\Models\PersonalDetails;
 use App\Models\ManageSubscription;
 use App\Models\Pricing\OfferPackage;
 use App\Models\Pricing\SubPlan;
-use App\Models\Sale;
+use App\Models\Revenue\Sale;
 use App\Models\Subscription;
 use App\Models\TransactionLog;
 use App\Models\User;
