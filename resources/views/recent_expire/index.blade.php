@@ -932,19 +932,14 @@
             console.log('🚀 Initializing WebSocket connection...');
 
             const pusher = new Pusher('{{ env('PUSHER_APP_KEY') }}', {
-                wsHost: window.location.hostname,
-                wsPort: 443,
-                wssPort: 443,
-                forceTLS: true,
+                cluster: '{{ env('PUSHER_APP_CLUSTER') }}',
                 encrypted: true,
-                disableStats: true,
+                wsHost: '{{ env('PUSHER_HOST', 'localhost') }}',
+                wsPort: {{ env('PUSHER_PORT', 6001) }},
+                wssPort: {{ env('PUSHER_PORT', 6001) }},
+                forceTLS: false,
                 enabledTransports: ['ws', 'wss'],
-                cluster: '{{ env('PUSHER_APP_CLUSTER', 'mt1') }}',
-                auth: {
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    }
-                }
+                disableStats: true,
             });
 
             // Connection state logging

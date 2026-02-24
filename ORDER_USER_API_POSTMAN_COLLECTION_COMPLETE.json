@@ -283,6 +283,35 @@
         },
         {
           "name": "Add Transaction Manually",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test script to validate response",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has success field', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('success');",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.success) {",
+                  "        console.log('✅ Transaction added successfully');",
+                  "        console.log('Transaction ID:', jsonData.data.transaction_log_id);",
+                  "        console.log('User ID:', jsonData.data.user_id);",
+                  "        console.log('Amount:', jsonData.data.amount);",
+                  "        console.log('Expiry Date:', jsonData.data.expiry_date);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -297,7 +326,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"vrajsurani606@gmail.com\",\n  \"contact\": \"9876543210\",\n  \"method\": \"Razorpay\",\n  \"transaction_id\": \"TXN123456789\",\n  \"currency_code\": \"INR\",\n  \"price_amount\": 999,\n  \"paid_amount\": 999,\n  \"plan_id\": 1,\n  \"usage_purpose\": \"professional\",\n  \"fromWallet\": 0,\n  \"fromWhere\": \"Mobile\",\n  \"coins\": 0\n}"
+              "raw": "{\n  \"email\": \"vrajsurani606@gmail.com\",\n  \"contact\": \"9876543210\",\n  \"method\": \"Razorpay\",\n  \"transaction_id\": \"TXN_{{$timestamp}}\",\n  \"currency_code\": \"INR\",\n  \"price_amount\": 999,\n  \"paid_amount\": 999,\n  \"plan_id\": 1,\n  \"usage_purpose\": \"professional\",\n  \"fromWallet\": 0,\n  \"fromWhere\": \"Mobile\",\n  \"coins\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{api_base_url}}/order-user/add-transaction-manually",
@@ -309,7 +343,7 @@
                 "add-transaction-manually"
               ]
             },
-            "description": "⚠️ AUTHENTICATION REQUIRED\n\nManually add subscription transaction\n\nRequired:\n- email: User email (must exist)\n- contact: Contact number\n- method: Payment method\n- transaction_id: Transaction ID\n- currency_code: INR or USD\n- price_amount: Original price\n- paid_amount: Paid amount\n- plan_id: Plan ID\n- usage_purpose: personal/professional\n\nOptional:\n- fromWallet: 0 or 1\n- fromWhere: Mobile/Web\n- coins: Coins to add"
+            "description": "⚠️ AUTHENTICATION REQUIRED\n\n**Manually add subscription transaction for a user**\n\n### Required Fields:\n- `email` (string, email): User email address (must exist in database)\n- `contact` (string, max 15): User contact number\n- `method` (string): Payment method (e.g., Razorpay, PhonePe, Bank Transfer)\n- `transaction_id` (string): Unique transaction ID (auto-generated with timestamp in example)\n- `currency_code` (string): INR or USD\n- `price_amount` (number): Original plan price\n- `paid_amount` (number): Amount actually paid\n- `plan_id` (integer): Subscription plan ID\n- `usage_purpose` (string): personal or professional\n\n### Optional Fields:\n- `fromWallet` (boolean): 0 or 1 (default: 0)\n- `fromWhere` (string): Source (Mobile/Web/Manual)\n- `coins` (integer): Coins to add (default: 0)\n\n### What This API Does:\n1. ✅ Validates user exists and is active\n2. ✅ Validates plan exists\n3. ✅ Checks transaction ID is unique\n4. ✅ Creates transaction log entry\n5. ✅ Deactivates old subscriptions\n6. ✅ Sets new expiry date based on plan validity\n7. ✅ Updates user premium status\n8. ✅ Updates personal details with usage purpose\n\n### Response Structure:\n```json\n{\n  \"success\": true,\n  \"message\": \"Transaction added successfully\",\n  \"data\": {\n    \"transaction_log_id\": 123,\n    \"user_id\": 456,\n    \"transaction_id\": \"TXN123456789\",\n    \"amount\": 999,\n    \"currency\": \"INR\",\n    \"plan_name\": \"Professional Plan\",\n    \"expiry_date\": \"2026-03-23 15:30:00\"\n  }\n}\n```\n\n### Error Responses:\n- **404**: User not found or Plan not found\n- **400**: User account inactive or Transaction ID already exists\n- **422**: Validation failed\n- **500**: Server error\n\n### Notes:\n- Transaction ID is auto-generated with timestamp to avoid duplicates\n- Old subscriptions are automatically deactivated\n- User becomes premium immediately\n- Expiry date is calculated from current date + plan validity days"
           }
         }
       ]

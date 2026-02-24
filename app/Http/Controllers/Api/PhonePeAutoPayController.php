@@ -556,19 +556,24 @@ class PhonePeAutoPayController extends Controller
                 ]);
 
                 $intentUrl = $data['intentUrl'] ?? null;
+
+                // The intentUrl from PhonePe response is already in UPI format (upi://mandate?...)
+                // This is the URL that should be used for QR code generation
+                $upiUrl = $intentUrl;
+
                 $responseData = [
                     'merchant_order_id' => $merchantOrderId,
                     'merchant_subscription_id' => $merchantSubscriptionId,
                     'phonepe_order_id' => $data['orderId'] ?? null,
-                    'redirect_url' => $intentUrl,
+                    'redirect_url' => $intentUrl, // This is the UPI URL for QR code
                     'state' => $data['state'] ?? 'PENDING',
                     'expire_at' => $data['expireAt'] ?? null
                 ];
 
                 // If showDecoded is true, parse the UPI intent URL and generate QR code
-                if ($showDecoded && $intentUrl) {
-                    $decodedParams = $this->parseUpiIntentUrl($intentUrl);
-                    $qrCodeData = $this->generateQRCodeData($intentUrl);
+                if ($showDecoded && $upiUrl) {
+                    $decodedParams = $this->parseUpiIntentUrl($upiUrl);
+                    $qrCodeData = $this->generateQRCodeData($upiUrl);
 
                     $responseData['decoded_params'] = $decodedParams;
                     $responseData['qr_code'] = $qrCodeData;
@@ -647,26 +652,27 @@ class PhonePeAutoPayController extends Controller
     /**
      * Generate QR code data from UPI intent URL
      */
-    private function generateQRCodeData($intentUrl)
+    private function generateQRCodeData($upiUrl)
     {
         try {
-            // Return the raw URL for React to generate QR code
+            // Return the UPI URL for QR code generation
+            // The UPI URL (upi://mandate?...) should be used directly in QR code libraries
             // React can use libraries like 'qrcode.react' or 'react-qr-code'
             return [
-                'url_for_qr' => $intentUrl,
-                'raw_upi_string' => $intentUrl,
+                'url_for_qr' => $upiUrl,
+                'raw_upi_string' => $upiUrl,
                 'instructions' => [
                     'en' => 'Scan this QR code with any UPI app to set up AutoPay mandate',
                     'hi' => 'AutoPay mandate सेट करने के लिए किसी भी UPI ऐप से इस QR कोड को स्कैन करें',
                     'gu' => 'AutoPay mandate સેટ કરવા માટે કોઈપણ UPI એપ્લિકેશન વડે આ QR કોડ સ્કેન કરો'
                 ],
-                'note' => 'Use this URL in React QR code library like qrcode.react or react-qr-code'
+                'note' => 'Use this UPI URL (upi://mandate?...) in React QR code library like qrcode.react or react-qr-code'
             ];
         } catch (\Exception $e) {
             Log::error('QR Code data preparation failed', ['error' => $e->getMessage()]);
             return [
-                'url_for_qr' => $intentUrl,
-                'raw_upi_string' => $intentUrl,
+                'url_for_qr' => $upiUrl,
+                'raw_upi_string' => $upiUrl,
                 'error' => 'QR code data preparation failed'
             ];
         }
@@ -769,18 +775,25 @@ class PhonePeAutoPayController extends Controller
             $data = $response->json();
 
             if ($response->successful()) {
-                // Update local status
-                if (isset($data['state'])) {
-                    $subscription->subscription_status = $data['state'];
-                    $subscription->save();
-                }
+                // Map PhonePe status to our local status
+                $phonepeState = $data['state'] ?? 'UNKNOWN';
+
+                // Update subscription status based on PhonePe response
+                $subscription->subscription_status = $phonepeState;
+
+                // Map to local status
+                $localStatus = $this->mapPhonePeStatusToLocal($phonepeState);
+                $subscription->status = $localStatus;
+                $subscription->save();
 
                 return ResponseHandler::sendResponse(
                     $request,
                     new ResponseInterface(200, true, 'Subscription status retrieved', [
                         'data' => [
-                            'local_status' => $subscription->status,
-                            'phonepe_status' => $data['state'] ?? null,
+                            'state' => $localStatus,
+                            'subscription_id' => $data['subscriptionId'] ?? null,
+                            'merchant_subscription_id' => $merchantSubscriptionId,
+                            'is_active' => in_array($localStatus, ['ACTIVE', 'COMPLETED']),
                             'details' => $data
                         ]
                     ])
@@ -804,6 +817,24 @@ class PhonePeAutoPayController extends Controller
                 new ResponseInterface(500, false, 'Status check failed: ' . $e->getMessage())
             );
         }
+    }
+
+    /**
+     * Map PhonePe status to local status
+     */
+    private function mapPhonePeStatusToLocal($phonepeState)
+    {
+        $statusMap = [
+            'PENDING' => 'PENDING',
+            'ACTIVATION_IN_PROGRESS' => 'PENDING',
+            'ACTIVE' => 'ACTIVE',
+            'COMPLETED' => 'COMPLETED',
+            'FAILED' => 'FAILED',
+            'CANCELLED' => 'CANCELLED',
+            'EXPIRED' => 'EXPIRED',
+        ];
+
+        return $statusMap[$phonepeState] ?? 'UNKNOWN';
     }
 
     /**
@@ -968,7 +999,7 @@ class PhonePeAutoPayController extends Controller
      * Generate QR Code for AutoPay Subscription
      * POST /api/phonepe/autopay/generate-qr
      * 
-     * This API creates a subscription and returns QR code data for React frontend
+     * This API creates a subscription and constructs UPI mandate URL for QR code
      */
     public function generateQRCode(Request $request)
     {
@@ -976,8 +1007,6 @@ class PhonePeAutoPayController extends Controller
             'user_id' => 'required|string',
             'plan_id' => 'required|string',
             'amount' => 'required|numeric|min:1',
-            'upi' => 'nullable|string',
-            'target_app' => 'nullable|string',
         ]);
 
         try {
@@ -988,55 +1017,41 @@ class PhonePeAutoPayController extends Controller
             // Get OAuth token
             $token = $this->tokenService->getAccessToken();
 
-            // Prepare subscription payload using CHECKOUT API (not subscription API)
+            $amount = $request->amount;
+            $expireAt = now()->addMonths(12)->timestamp * 1000;
+
+            // Use Subscription API v2 - it will return intentUrl which we'll extract UPI from
             $payload = [
-                "merchantId" => env('PHONEPE_MERCHANT_ID', 'M23LAMPVYPELC'),
                 "merchantOrderId" => $merchantOrderId,
-                "merchantUserId" => env('PHONEPE_MERCHANT_ID', 'M23LAMPVYPELC'),
-                "amount" => (int) ($request->amount * 100),
+                "amount" => (int) ($amount * 100),
+                "expireAt" => $expireAt,
                 "paymentFlow" => [
-                    "type" => "SUBSCRIPTION_CHECKOUT_SETUP",
-                    "message" => "Subscription Payment",
-                    "merchantUrls" => [
-                        "redirectUrl" => url('/api/phonepe/autopay/callback'),
-                        "cancelRedirectUrl" => url('/api/phonepe/autopay/callback'),
-                    ],
+                    "type" => "SUBSCRIPTION_SETUP",
+                    "merchantSubscriptionId" => $merchantSubscriptionId,
+                    "authWorkflowType" => "TRANSACTION",
+                    "amountType" => "FIXED",
+                    "maxAmount" => (int) ($amount * 100),
+                    "frequency" => "Monthly",
+                    "expireAt" => $expireAt,
                     "paymentMode" => [
                         "type" => "UPI_INTENT",
-                        "targetApp" => $request->target_app ?? "com.phonepe.app",
-                    ],
-                    "subscriptionDetails" => [
-                        "subscriptionType" => "RECURRING",
-                        "merchantSubscriptionId" => $merchantSubscriptionId,
-                        "authWorkflowType" => "TRANSACTION",
-                        "amountType" => "FIXED",
-                        "maxAmount" => (int) ($request->amount * 100),
-                        "recurringAmount" => (int) ($request->amount * 100),
-                        "frequency" => "Monthly",
-                        "productType" => "UPI_MANDATE",
-                        "expireAt" => now()->addMonths(12)->timestamp * 1000,
+                        "targetApp" => "com.phonepe.app",
                     ],
                 ],
                 "deviceContext" => [
                     "deviceOS" => "ANDROID"
                 ],
-                "expireAfter" => 3000,
             ];
 
-            // Add UPI if provided
-            if ($request->upi) {
-                $payload['paymentFlow']['paymentMode']['vpa'] = $request->upi;
-            }
-
-            // Use CHECKOUT API (not subscription API) - this works in sandbox
+            // Use Subscription API v2
             $url = $this->production
-                ? 'https://api.phonepe.com/apis/pg/checkout/v2/pay'
-                : 'https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/pay';
+                ? "https://api.phonepe.com/apis/pg/subscriptions/v2/setup"
+                : "https://api-preprod.phonepe.com/apis/pg-sandbox/subscriptions/v2/setup";
 
             Log::info('🔄 Creating subscription for QR code', [
                 'merchant_order_id' => $merchantOrderId,
                 'merchant_subscription_id' => $merchantSubscriptionId,
-                'amount' => $request->amount,
+                'amount' => $amount,
                 'environment' => $this->production ? 'production' : 'sandbox',
                 'url' => $url
             ]);
@@ -1066,14 +1081,14 @@ class PhonePeAutoPayController extends Controller
                 );
             }
 
-            // Check for successful response (checkout API returns redirectUrl)
-            if ($response->successful() && isset($data['redirectUrl'])) {
+            // Check for successful response
+            if ($response->successful()) {
                 // Create Order record
-                Order::create([
+                $order = Order::create([
                     'user_id' => $request->user_id,
                     'plan_id' => $request->plan_id,
                     'crafty_id' => Order::generateCraftyId(),
-                    'amount' => $request->amount,
+                    'amount' => $amount,
                     'currency' => 'INR',
                     'status' => 'pending',
                     'type' => 'new_sub',
@@ -1087,11 +1102,12 @@ class PhonePeAutoPayController extends Controller
                     'phonepe_order_id' => $data['orderId'] ?? null,
                     'phonepe_subscription_id' => $data['orderId'] ?? null,
                     'user_id' => $request->user_id,
+                    'order_id' => $order->id,
                     'plan_id' => $request->plan_id,
-                    'amount' => $request->amount,
+                    'amount' => $amount,
                     'currency' => 'INR',
                     'frequency' => 'Monthly',
-                    'max_amount' => $request->amount,
+                    'max_amount' => $amount,
                     'start_date' => now()->toDateString(),
                     'next_billing_date' => now()->addMonth()->toDateString(),
                     'status' => 'PENDING',
@@ -1102,27 +1118,71 @@ class PhonePeAutoPayController extends Controller
                     ]
                 ]);
 
-                $redirectUrl = $data['redirectUrl'] ?? null;
+                // Get the intent URL from PhonePe response
+                $intentUrl = $data['intentUrl'] ?? null;
 
-                if (!$redirectUrl) {
+                if (!$intentUrl) {
                     return ResponseHandler::sendResponse(
                         $request,
-                        new ResponseInterface(400, false, 'Redirect URL not received from PhonePe')
+                        new ResponseInterface(400, false, 'Intent URL not received from PhonePe', [
+                            'response' => $data
+                        ])
                     );
                 }
 
-                // Parse UPI intent URL from redirect URL
-                // The redirectUrl contains the UPI intent URL
-                $intentUrl = $redirectUrl;
+                // Check if intentUrl is already in UPI format
+                $upiUrl = $intentUrl;
+                $isUpiFormat = strpos($intentUrl, 'upi://') === 0;
 
-                // Generate QR code
-                $qrCodeBase64 = $this->generateQRCodeData($intentUrl);
+                // If it's HTTPS URL, we need to construct UPI mandate URL manually
+                if (!$isUpiFormat) {
+                    // Construct UPI mandate URL from subscription details
+                    $merchantId = env('PHONEPE_MERCHANT_ID', 'M23LAMPVYPELC');
+                    $validityStart = now()->format('dmY');
+                    $validityEnd = now()->addMonths(12)->format('dmY');
+                    $qrExpire = now()->addMinutes(15)->format('dmY');
+
+                    // Build UPI mandate URL
+                    $upiUrl = "upi://mandate?" . http_build_query([
+                        'pa' => $merchantId . '@ybl',
+                        'pn' => 'craftyartapp.com',
+                        'tr' => $data['orderId'] ?? $merchantOrderId,
+                        'cu' => 'INR',
+                        'am' => number_format($amount, 2, '.', ''),
+                        'fam' => number_format($amount, 2, '.', ''),
+                        'mc' => '4816',
+                        'mode' => '04',
+                        'purpose' => '14',
+                        'rev' => 'Y',
+                        'share' => 'Y',
+                        'block' => 'N',
+                        'txnType' => 'CREATE',
+                        'validitystart' => $validityStart,
+                        'validityend' => $validityEnd,
+                        'amrule' => 'MAX',
+                        'recur' => 'ASPRESENTED',
+                        'recurringAmount' => number_format($amount, 2, '.', ''),
+                        'recurringType' => 'MONTHLY',
+                        'mn' => 'Autopay',
+                        'ver' => '01',
+                        'QRts' => now()->toIso8601String(),
+                        'QRexpire' => now()->addMinutes(15)->toIso8601String(),
+                        'qrMedium' => '00',
+                        'mg' => 'ONLINE',
+                    ]);
+                }
+
+                // Generate QR code data
+                $qrCodeData = $this->generateQRCodeData($upiUrl);
 
                 // Parse UPI parameters
-                $decodedParams = $this->parseUpiIntentUrl($intentUrl);
+                $decodedParams = $this->parseUpiIntentUrl($upiUrl);
 
                 Log::info('✅ QR Code generated successfully', [
-                    'merchant_subscription_id' => $merchantSubscriptionId
+                    'merchant_subscription_id' => $merchantSubscriptionId,
+                    'original_url' => $intentUrl,
+                    'upi_url' => $upiUrl,
+                    'is_upi_format' => strpos($upiUrl, 'upi://') === 0
                 ]);
 
                 return ResponseHandler::sendResponse(
@@ -1134,16 +1194,16 @@ class PhonePeAutoPayController extends Controller
                         'state' => $data['state'] ?? 'PENDING',
                         'expire_at' => $data['expireAt'] ?? null,
                         'qr_code' => [
-                            'base64' => $qrCodeBase64,
-                            'redirect_url' => $redirectUrl,
-                            'intent_url' => $intentUrl,
+                            'base64' => $qrCodeData,
+                            'intent_url' => $upiUrl,
+                            'original_url' => $intentUrl,
                             'decoded_params' => $decodedParams
                         ],
                         'instructions' => [
                             'step_1' => 'Open any UPI app (PhonePe, GPay, Paytm, etc.)',
                             'step_2' => 'Tap on "Scan QR Code" option',
                             'step_3' => 'Scan this QR code with your phone camera',
-                            'step_4' => 'Verify amount and complete payment'
+                            'step_4' => 'Verify amount and complete mandate setup'
                         ]
                     ])
                 );
@@ -1167,6 +1227,199 @@ class PhonePeAutoPayController extends Controller
                 $request,
                 new ResponseInterface(500, false, 'QR Code generation failed: ' . $e->getMessage())
             );
+        }
+    }
+
+    /**
+     * Handle PhonePe Webhook for automatic status updates
+     * POST /api/phonepe/autopay/webhook
+     * 
+     * PhonePe sends webhook when:
+     * - User approves mandate (ACTIVE)
+     * - User declines mandate (FAILED)
+     * - Payment succeeds (COMPLETED)
+     * - Payment fails (PAYMENT_FAILED)
+     * - Subscription cancelled (CANCELLED)
+     */
+    public function handleWebhook(Request $request)
+    {
+        try {
+            $payload = $request->all();
+
+            Log::info('📥 PhonePe Webhook Received', [
+                'payload' => $payload,
+                'headers' => $request->headers->all()
+            ]);
+
+            // Extract subscription ID from webhook
+            $merchantSubscriptionId = $payload['merchantSubscriptionId'] ?? null;
+            $phonepeSubscriptionId = $payload['subscriptionId'] ?? null;
+            $state = $payload['state'] ?? null;
+            $transactionId = $payload['transactionId'] ?? null;
+
+            if (!$merchantSubscriptionId && !$phonepeSubscriptionId) {
+                Log::warning('⚠️ Webhook missing subscription ID');
+                return response()->json(['success' => false, 'message' => 'Missing subscription ID'], 400);
+            }
+
+            // Find subscription
+            $subscription = PhonePeSubscription::where('merchant_subscription_id', $merchantSubscriptionId)
+                ->orWhere('phonepe_subscription_id', $phonepeSubscriptionId)
+                ->first();
+
+            if (!$subscription) {
+                Log::warning('⚠️ Subscription not found in webhook', [
+                    'merchant_subscription_id' => $merchantSubscriptionId,
+                    'phonepe_subscription_id' => $phonepeSubscriptionId
+                ]);
+                return response()->json(['success' => false, 'message' => 'Subscription not found'], 404);
+            }
+
+            // Map PhonePe status to local status
+            $localStatus = $this->mapPhonePeStatusToLocal($state);
+
+            // Update subscription status
+            $subscription->subscription_status = $state;
+            $subscription->status = $localStatus;
+
+            // Update metadata with webhook data
+            $metadata = $subscription->metadata ?? [];
+            $metadata['webhooks'] = $metadata['webhooks'] ?? [];
+            $metadata['webhooks'][] = [
+                'received_at' => now()->toIso8601String(),
+                'state' => $state,
+                'transaction_id' => $transactionId,
+                'payload' => $payload
+            ];
+            $subscription->metadata = $metadata;
+            $subscription->save();
+
+            // Update related order status if exists
+            if ($subscription->order_id) {
+                $order = Order::find($subscription->order_id);
+                if ($order) {
+                    if (in_array($localStatus, ['ACTIVE', 'COMPLETED'])) {
+                        $order->status = 'completed';
+                    } elseif ($localStatus === 'FAILED') {
+                        $order->status = 'failed';
+                    }
+                    $order->save();
+
+                    Log::info('✅ Order status updated', [
+                        'order_id' => $order->id,
+                        'new_status' => $order->status
+                    ]);
+                }
+            }
+
+            Log::info('✅ Webhook processed successfully', [
+                'subscription_id' => $subscription->id,
+                'old_status' => $subscription->getOriginal('status'),
+                'new_status' => $localStatus,
+                'phonepe_state' => $state
+            ]);
+
+            // Return success response to PhonePe
+            return response()->json([
+                'success' => true,
+                'message' => 'Webhook processed successfully'
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Webhook processing failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            // Still return 200 to PhonePe to avoid retries
+            return response()->json([
+                'success' => false,
+                'message' => 'Webhook processing failed'
+            ], 200);
+        }
+    }
+
+    /**
+     * Manually sync subscription status from PhonePe
+     * Useful when webhook is missed or for testing
+     */
+    public function syncSubscriptionStatus($merchantSubscriptionId)
+    {
+        try {
+            $subscription = PhonePeSubscription::where('merchant_subscription_id', $merchantSubscriptionId)->first();
+
+            if (!$subscription) {
+                return [
+                    'success' => false,
+                    'message' => 'Subscription not found'
+                ];
+            }
+
+            // Get latest status from PhonePe
+            $token = $this->tokenService->getAccessToken();
+            $url = $this->production
+                ? "https://api.phonepe.com/apis/pg/subscriptions/v2/{$merchantSubscriptionId}/status?details=true"
+                : "https://api-preprod.phonepe.com/apis/pg-sandbox/subscriptions/v2/{$merchantSubscriptionId}/status?details=true";
+
+            $response = Http::withHeaders([
+                "Authorization" => "O-Bearer " . $token,
+                "Content-Type" => "application/json",
+                "Accept" => "application/json"
+            ])->get($url);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $phonepeState = $data['state'] ?? 'UNKNOWN';
+                $localStatus = $this->mapPhonePeStatusToLocal($phonepeState);
+
+                // Update subscription
+                $oldStatus = $subscription->status;
+                $subscription->subscription_status = $phonepeState;
+                $subscription->status = $localStatus;
+                $subscription->save();
+
+                // Update order if status changed
+                if ($oldStatus !== $localStatus && $subscription->order_id) {
+                    $order = Order::find($subscription->order_id);
+                    if ($order) {
+                        if (in_array($localStatus, ['ACTIVE', 'COMPLETED'])) {
+                            $order->status = 'completed';
+                        } elseif ($localStatus === 'FAILED') {
+                            $order->status = 'failed';
+                        }
+                        $order->save();
+                    }
+                }
+
+                Log::info('✅ Subscription synced', [
+                    'subscription_id' => $subscription->id,
+                    'old_status' => $oldStatus,
+                    'new_status' => $localStatus
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => 'Status synced successfully',
+                    'old_status' => $oldStatus,
+                    'new_status' => $localStatus,
+                    'phonepe_state' => $phonepeState
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Failed to fetch status from PhonePe'
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('❌ Sync failed', [
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Sync failed: ' . $e->getMessage()
+            ];
         }
     }
 }

@@ -301,6 +301,7 @@ Route::post('phonepe/autopay/redeem', [App\Http\Controllers\Api\PhonePeAutoPayCo
 Route::post('phonepe/autopay/cancel', [App\Http\Controllers\Api\PhonePeAutoPayController::class, 'cancelSubscription']);
 Route::post('phonepe/autopay/generate-qr', [App\Http\Controllers\Api\PhonePeAutoPayController::class, 'generateQRCode']);
 Route::post('phonepe/autopay/validateUpi', [App\Http\Controllers\Api\PhonePeAutoPayController::class, 'validateUpi']);
+Route::any('phonepe/autopay/webhook', [App\Http\Controllers\Api\PhonePeAutoPayController::class, 'handleWebhook']); // Webhook for automatic status updates
 
 // JSON file handling APIs
 Route::post('/json/save', [CaricatureController::class, 'saveJson']);
@@ -585,6 +586,14 @@ Route::prefix('admin/designer')->middleware('auth:api')->group(function () {
     Route::get('/withdrawals', [AdminDesignerController::class, 'getWithdrawals']);
     Route::post('/withdrawal/{id}/process', [AdminDesignerController::class, 'processWithdrawal']);
     Route::post('/withdrawal/{id}/reject', [AdminDesignerController::class, 'rejectWithdrawal']);
+
+    // Designer Categories Management
+    Route::get('/categories', [App\Http\Controllers\Api\DesignerCategoryApiController::class, 'index']);
+    Route::get('/category/{id}', [App\Http\Controllers\Api\DesignerCategoryApiController::class, 'show']);
+    Route::post('/category', [App\Http\Controllers\Api\DesignerCategoryApiController::class, 'store']);
+    Route::put('/category/{id}', [App\Http\Controllers\Api\DesignerCategoryApiController::class, 'update']);
+    Route::post('/category/{id}/toggle', [App\Http\Controllers\Api\DesignerCategoryApiController::class, 'toggleActive']);
+    Route::delete('/category/{id}', [App\Http\Controllers\Api\DesignerCategoryApiController::class, 'destroy']);
 });
 
 

@@ -17,7 +17,7 @@ class PhonePeSimplePaymentTestController extends Controller
     protected $clientSecret;
     protected $clientVersion;
     protected $merchantUserId;
-    
+
     public function __construct()
     {
         // NEW Production credentials
@@ -26,7 +26,7 @@ class PhonePeSimplePaymentTestController extends Controller
         $this->clientVersion = "1";
         $this->merchantUserId = "M22EOXLUSO1LA";
     }
-    
+
     /**
      * Get or generate PhonePe OAuth access token
      */
@@ -38,22 +38,22 @@ class PhonePeSimplePaymentTestController extends Controller
             Log::info('Using cached PhonePe token');
             return $cachedToken;
         }
-        
+
         // Generate new token
         $accessTokenUrl = 'https://api.phonepe.com/apis/identity-manager/v1/oauth/token';
-        
+
         try {
             Log::info('Generating new PhonePe OAuth token');
-            
+
             $response = Http::asForm()->post($accessTokenUrl, [
                 'client_id' => $this->clientId,
                 'client_secret' => $this->clientSecret,
                 'client_version' => $this->clientVersion,
                 'grant_type' => 'client_credentials',
             ]);
-            
+
             $data = $response->json();
-            
+
             if (!isset($data['access_token'])) {
                 Log::error('PhonePe OAuth Token Generation Failed', [
                     'response' => $data,
@@ -61,19 +61,19 @@ class PhonePeSimplePaymentTestController extends Controller
                 ]);
                 throw new \Exception('PhonePe OAuth failed: ' . json_encode($data));
             }
-            
+
             $accessToken = $data['access_token'];
             $expiresIn = $data['expires_in'] ?? 3600;
-            
+
             // Cache token for 55 minutes (5 minutes before expiry)
             Cache::put('phonepe_access_token', $accessToken, ($expiresIn - 300));
-            
+
             Log::info('New PhonePe access token generated', [
                 'expires_in' => $expiresIn
             ]);
-            
+
             return $accessToken;
-            
+
         } catch (\Exception $e) {
             Log::error('PhonePe Access Token Generation Exception', [
                 'error' => $e->getMessage(),
@@ -82,7 +82,7 @@ class PhonePeSimplePaymentTestController extends Controller
             throw $e;
         }
     }
-    
+
     /**
      * Send payment request using OAuth authentication (like your working project)
      */
@@ -92,13 +92,13 @@ class PhonePeSimplePaymentTestController extends Controller
             $upiId = $request->input('upi_id', 'vrajsurani606@okaxis');
             $amount = $request->input('amount', 1);
             $mobile = $request->input('mobile', '9724085965');
-            
+
             // Get OAuth token
             $token = $this->getAccessToken();
-            
+
             $merchantOrderId = "MO" . uniqid() . time();
             $merchantSubscriptionId = "MS" . uniqid() . time();
-            
+
             // Using SUBSCRIPTION_SETUP like your working project
             $payload = [
                 "merchantOrderId" => $merchantOrderId,
@@ -130,9 +130,9 @@ class PhonePeSimplePaymentTestController extends Controller
                     "deviceOS" => "ANDROID"
                 ]
             ];
-            
+
             $url = "https://api.phonepe.com/apis/pg/subscriptions/v2/setup";
-            
+
             Log::info('Sending PhonePe Payment Request (OAuth)', [
                 'url' => $url,
                 'merchant_order_id' => $merchantOrderId,
@@ -140,20 +140,20 @@ class PhonePeSimplePaymentTestController extends Controller
                 'amount' => $amount,
                 'payload' => $payload
             ]);
-            
+
             $response = Http::withHeaders([
                 "Authorization" => "O-Bearer " . $token,
                 "Content-Type" => "application/json",
                 "Accept" => "application/json"
             ])->post($url, $payload);
-            
+
             $data = $response->json();
-            
+
             Log::info('PhonePe Payment Response (OAuth)', [
                 'status_code' => $response->status(),
                 'response' => $data
             ]);
-            
+
             // Store in history table (old table for testing)
             if (!empty($data['orderId'])) {
                 PhonePeAutoPayTestHistory::create([
@@ -169,7 +169,7 @@ class PhonePeSimplePaymentTestController extends Controller
                     'response_data' => $data,
                     'notes' => 'AutoPay request sent successfully'
                 ]);
-                
+
                 // Store in new transactions table (for admin panel)
                 PhonePeTransaction::create([
                     'merchant_order_id' => $merchantOrderId,
@@ -188,7 +188,7 @@ class PhonePeSimplePaymentTestController extends Controller
                     'response_data' => $data,
                     'notes' => 'AutoPay subscription setup request sent'
                 ]);
-                
+
                 // Create notification for setup request
                 PhonePeNotification::create([
                     'merchant_order_id' => $merchantOrderId,
@@ -205,7 +205,7 @@ class PhonePeSimplePaymentTestController extends Controller
                     'is_processed' => false,
                     'notes' => 'Subscription setup request sent to user UPI'
                 ]);
-                
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Payment request sent successfully!',
@@ -220,7 +220,7 @@ class PhonePeSimplePaymentTestController extends Controller
                     ]
                 ]);
             }
-            
+
             return response()->json([
                 'success' => false,
                 'message' => $data['message'] ?? 'Payment request failed',
@@ -231,17 +231,17 @@ class PhonePeSimplePaymentTestController extends Controller
                     'response' => $data
                 ]
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('PhonePe Payment Request Failed: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
             ], 500);
         }
     }
-    
+
     /**
      * Check subscription status
      */
@@ -250,39 +250,49 @@ class PhonePeSimplePaymentTestController extends Controller
         try {
             $merchantSubscriptionId = $request->input('merchantSubscriptionId');
             $token = $this->getAccessToken();
-            
+
             $url = "https://api.phonepe.com/apis/pg/subscriptions/v2/{$merchantSubscriptionId}/status?details=true";
-            
+
             Log::info('Checking subscription status', [
                 'subscription_id' => $merchantSubscriptionId
             ]);
-            
+
             $response = Http::withHeaders([
                 "Authorization" => "O-Bearer " . $token,
                 "Content-Type" => "application/json",
                 "Accept" => "application/json"
             ])->get($url);
-            
+
             $data = $response->json();
-            
+
             // Update history
             $history = PhonePeAutoPayTestHistory::where('merchant_subscription_id', $merchantSubscriptionId)->first();
             if ($history) {
-                $history->subscription_state = $data['state'] ?? 'UNKNOWN';
-                $history->is_autopay_active = in_array($data['state'] ?? '', ['ACTIVE', 'COMPLETED']);
+                $phonepeState = $data['state'] ?? 'UNKNOWN';
+
+                // Map ACTIVATION_IN_PROGRESS to PENDING for display
+                $displayState = ($phonepeState === 'ACTIVATION_IN_PROGRESS') ? 'PENDING' : $phonepeState;
+
+                $history->subscription_state = $displayState;
+                $history->is_autopay_active = in_array($phonepeState, ['ACTIVE', 'COMPLETED']);
                 $history->response_data = array_merge($history->response_data ?? [], ['status_check' => $data]);
                 $history->save();
             }
-            
+
             // Update transaction in new table
             $transaction = PhonePeTransaction::where('merchant_subscription_id', $merchantSubscriptionId)->first();
             if ($transaction) {
-                $transaction->status = $data['state'] ?? 'UNKNOWN';
-                $transaction->payment_state = $data['state'] ?? 'UNKNOWN';
-                $transaction->is_autopay_active = in_array($data['state'] ?? '', ['ACTIVE', 'COMPLETED']);
+                $phonepeState = $data['state'] ?? 'UNKNOWN';
+
+                // Map ACTIVATION_IN_PROGRESS to PENDING for display
+                $displayState = ($phonepeState === 'ACTIVATION_IN_PROGRESS') ? 'PENDING' : $phonepeState;
+
+                $transaction->status = $displayState;
+                $transaction->payment_state = $displayState;
+                $transaction->is_autopay_active = in_array($phonepeState, ['ACTIVE', 'COMPLETED']);
                 $transaction->response_data = array_merge($transaction->response_data ?? [], ['status_check_' . time() => $data]);
                 $transaction->save();
-                
+
                 // Create notification for status check
                 PhonePeNotification::create([
                     'merchant_order_id' => $transaction->merchant_order_id,
@@ -301,12 +311,12 @@ class PhonePeSimplePaymentTestController extends Controller
                     'notes' => 'Manual status check performed'
                 ]);
             }
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $data
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Check subscription status failed: ' . $e->getMessage());
             return response()->json([
@@ -315,7 +325,7 @@ class PhonePeSimplePaymentTestController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Send pre-debit notification
      * 
@@ -333,7 +343,7 @@ class PhonePeSimplePaymentTestController extends Controller
             $merchantSubscriptionId = $request->input('merchantSubscriptionId');
             $amount = $request->input('amount', 1);
             $token = $this->getAccessToken();
-            
+
             // First check if subscription is ACTIVE
             $statusUrl = "https://api.phonepe.com/apis/pg/subscriptions/v2/{$merchantSubscriptionId}/status?details=true";
             $statusResponse = Http::withHeaders([
@@ -341,9 +351,9 @@ class PhonePeSimplePaymentTestController extends Controller
                 "Content-Type" => "application/json",
                 "Accept" => "application/json"
             ])->get($statusUrl);
-            
+
             $statusData = $statusResponse->json();
-            
+
             if (!isset($statusData['state']) || $statusData['state'] !== 'ACTIVE') {
                 return response()->json([
                     'success' => false,
@@ -351,13 +361,13 @@ class PhonePeSimplePaymentTestController extends Controller
                     'data' => $statusData
                 ]);
             }
-            
+
             Log::info('Pre-debit notification check', [
                 'subscription_id' => $merchantSubscriptionId,
                 'amount' => $amount,
                 'subscription_state' => $statusData['state']
             ]);
-            
+
             // Update history
             $history = PhonePeAutoPayTestHistory::where('merchant_subscription_id', $merchantSubscriptionId)->first();
             if ($history) {
@@ -373,7 +383,7 @@ class PhonePeSimplePaymentTestController extends Controller
                 ]);
                 $history->save();
             }
-            
+
             // Update transaction
             $transaction = PhonePeTransaction::where('merchant_subscription_id', $merchantSubscriptionId)->first();
             if ($transaction) {
@@ -400,7 +410,7 @@ class PhonePeSimplePaymentTestController extends Controller
                     'notes' => 'Pre-debit notification will be sent by bank when you trigger auto-debit. Click "💳 Debit" button to trigger payment.'
                 ]);
             }
-            
+
             return response()->json([
                 'success' => true,
                 'message' => "✅ Subscription is ACTIVE and ready!\n\n📱 Pre-debit SMS will be sent by your bank when you trigger the payment.\n\n🎯 Click '💳 Debit' button to trigger auto-payment now.",
@@ -411,7 +421,7 @@ class PhonePeSimplePaymentTestController extends Controller
                 'next_step' => 'Click "💳 Debit" button to trigger immediate payment and receive bank SMS',
                 'data' => $statusData
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Pre-debit notification check failed: ' . $e->getMessage());
             return response()->json([
@@ -421,7 +431,7 @@ class PhonePeSimplePaymentTestController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Trigger auto-debit (manual redemption)
      */
@@ -431,7 +441,7 @@ class PhonePeSimplePaymentTestController extends Controller
             $merchantSubscriptionId = $request->input('merchantSubscriptionId');
             $amount = $request->input('amount', 1);
             $token = $this->getAccessToken();
-            
+
             // First check if subscription is ACTIVE
             $statusUrl = "https://api.phonepe.com/apis/pg/subscriptions/v2/{$merchantSubscriptionId}/status?details=true";
             $statusResponse = Http::withHeaders([
@@ -439,9 +449,9 @@ class PhonePeSimplePaymentTestController extends Controller
                 "Content-Type" => "application/json",
                 "Accept" => "application/json"
             ])->get($statusUrl);
-            
+
             $statusData = $statusResponse->json();
-            
+
             if (!isset($statusData['state']) || $statusData['state'] !== 'ACTIVE') {
                 return response()->json([
                     'success' => false,
@@ -449,9 +459,9 @@ class PhonePeSimplePaymentTestController extends Controller
                     'data' => $statusData
                 ]);
             }
-            
+
             $merchantOrderId = "MO_REDEEM_" . uniqid() . time();
-            
+
             // Correct payload structure for redemption
             $payload = [
                 'merchantOrderId' => $merchantOrderId,
@@ -467,9 +477,9 @@ class PhonePeSimplePaymentTestController extends Controller
                     'deviceOS' => 'ANDROID'
                 ]
             ];
-            
+
             $url = "https://api.phonepe.com/apis/pg/subscriptions/v2/redeem";
-            
+
             Log::info('Triggering manual auto-debit', [
                 'subscription_id' => $merchantSubscriptionId,
                 'amount' => $amount,
@@ -477,22 +487,22 @@ class PhonePeSimplePaymentTestController extends Controller
                 'subscription_state' => $statusData['state'],
                 'payload' => $payload
             ]);
-            
+
             $response = Http::withHeaders([
                 "Authorization" => "O-Bearer " . $token,
                 "Content-Type" => "application/json",
                 "Accept" => "application/json"
             ])->post($url, $payload);
-            
+
             $data = $response->json();
-            
+
             Log::info('Auto-debit response', [
                 'status_code' => $response->status(),
                 'response' => $data
             ]);
-            
+
             $success = $response->successful() && isset($data['orderId']);
-            
+
             // Update history
             $history = PhonePeAutoPayTestHistory::where('merchant_subscription_id', $merchantSubscriptionId)->first();
             if ($history) {
@@ -511,7 +521,7 @@ class PhonePeSimplePaymentTestController extends Controller
                 ]);
                 $history->save();
             }
-            
+
             // Update transaction
             $transaction = PhonePeTransaction::where('merchant_subscription_id', $merchantSubscriptionId)->first();
             if ($transaction) {
@@ -526,7 +536,7 @@ class PhonePeSimplePaymentTestController extends Controller
                     'redemption_' . time() => $data
                 ]);
                 $transaction->save();
-                
+
                 // Create notification for auto-debit
                 PhonePeNotification::create([
                     'merchant_order_id' => $merchantOrderId,
@@ -545,7 +555,7 @@ class PhonePeSimplePaymentTestController extends Controller
                     'notes' => $success ? 'Auto-debit payment successful' : 'Auto-debit payment failed'
                 ]);
             }
-            
+
             return response()->json([
                 'success' => $success,
                 'message' => $success ? 'Auto-debit triggered successfully! Check your phone for payment notification.' : ($data['message'] ?? 'Auto-debit failed'),
@@ -554,7 +564,7 @@ class PhonePeSimplePaymentTestController extends Controller
                 'state' => $data['state'] ?? null,
                 'data' => $data
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Auto-debit trigger failed: ' . $e->getMessage());
             return response()->json([
@@ -563,7 +573,7 @@ class PhonePeSimplePaymentTestController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Get AutoPay test history
      */
@@ -573,12 +583,12 @@ class PhonePeSimplePaymentTestController extends Controller
             $history = PhonePeAutoPayTestHistory::orderBy('created_at', 'desc')
                 ->limit(50)
                 ->get();
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $history
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Get history failed: ' . $e->getMessage());
             return response()->json([
@@ -587,7 +597,7 @@ class PhonePeSimplePaymentTestController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Simulate auto-debit for testing (PhonePe doesn't allow manual redemption)
      */
@@ -596,35 +606,35 @@ class PhonePeSimplePaymentTestController extends Controller
         try {
             $merchantSubscriptionId = $request->input('merchantSubscriptionId');
             $amount = $request->input('amount', 1);
-            
+
             Log::info('Simulating auto-debit', [
                 'subscription_id' => $merchantSubscriptionId,
                 'amount' => $amount
             ]);
-            
+
             // Find transaction
             $transaction = PhonePeTransaction::where('merchant_subscription_id', $merchantSubscriptionId)->first();
-            
+
             if (!$transaction) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Transaction not found'
                 ], 404);
             }
-            
+
             if (!$transaction->is_autopay_active) {
                 return response()->json([
                     'success' => false,
                     'message' => 'AutoPay is not active. Please approve the mandate first.'
                 ], 400);
             }
-            
+
             // Simulate successful payment
             $transaction->autopay_count = $transaction->autopay_count + 1;
             $transaction->last_autopay_at = now();
             $transaction->next_autopay_at = now()->addMonth();
             $transaction->save();
-            
+
             // Create notification
             PhonePeNotification::create([
                 'merchant_order_id' => 'MO_SIM_' . time(),
@@ -645,12 +655,12 @@ class PhonePeSimplePaymentTestController extends Controller
                 'processed_at' => now(),
                 'notes' => '⚠️ SIMULATED auto-debit for testing purposes. In production, PhonePe handles this automatically.'
             ]);
-            
+
             Log::info('Auto-debit simulated successfully', [
                 'subscription_id' => $merchantSubscriptionId,
                 'autopay_count' => $transaction->autopay_count
             ]);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => '✅ Auto-debit simulated successfully!',
@@ -662,7 +672,7 @@ class PhonePeSimplePaymentTestController extends Controller
                 ],
                 'note' => '⚠️ This is a simulation. In production, PhonePe automatically debits based on schedule.'
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Simulate auto-debit failed: ' . $e->getMessage());
             return response()->json([

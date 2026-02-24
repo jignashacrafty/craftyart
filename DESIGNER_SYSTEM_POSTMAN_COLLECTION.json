@@ -1699,6 +1699,490 @@
               ]
             }
           }
+        },
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/designer/categories?showDecoded=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "designer",
+                "categories"
+              ],
+              "query": [
+                {
+                  "key": "showDecoded",
+                  "value": "1",
+                  "description": "Get unencrypted response for testing"
+                },
+                {
+                  "key": "is_active",
+                  "value": "1",
+                  "description": "Filter by active status (optional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get all designer categories with optional filtering by active status"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/designer/categories?showDecoded=1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "designer",
+                    "categories"
+                  ],
+                  "query": [
+                    {
+                      "key": "showDecoded",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Categories retrieved successfully\",\n  \"categories\": [\n    {\n      \"id\": 1,\n      \"name\": \"Design Trends\",\n      \"slug\": \"design-trends\",\n      \"description\": \"Latest design trends and styles\",\n      \"icon\": null,\n      \"sort_order\": 1,\n      \"is_active\": true,\n      \"created_at\": \"2026-02-14T00:00:00.000000Z\",\n      \"updated_at\": \"2026-02-14T00:00:00.000000Z\"\n    },\n    {\n      \"id\": 2,\n      \"name\": \"UI/UX Design\",\n      \"slug\": \"ui-ux-design\",\n      \"description\": \"User interface and experience design\",\n      \"icon\": null,\n      \"sort_order\": 2,\n      \"is_active\": true,\n      \"created_at\": \"2026-02-14T00:00:00.000000Z\",\n      \"updated_at\": \"2026-02-14T00:00:00.000000Z\"\n    }\n  ],\n  \"total\": 2\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Single Category",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/designer/category/1?showDecoded=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "designer",
+                "category",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "showDecoded",
+                  "value": "1",
+                  "description": "Get unencrypted response for testing"
+                }
+              ]
+            },
+            "description": "Get single category by ID"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/designer/category/1?showDecoded=1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "designer",
+                    "category",
+                    "1"
+                  ],
+                  "query": [
+                    {
+                      "key": "showDecoded",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Category retrieved successfully\",\n  \"category\": {\n    \"id\": 1,\n    \"name\": \"Design Trends\",\n    \"slug\": \"design-trends\",\n    \"description\": \"Latest design trends and styles\",\n    \"icon\": null,\n    \"sort_order\": 1,\n    \"is_active\": true,\n    \"created_at\": \"2026-02-14T00:00:00.000000Z\",\n    \"updated_at\": \"2026-02-14T00:00:00.000000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Photography\",\n  \"description\": \"Photography and photo editing\",\n  \"icon\": \"fa-camera\",\n  \"sort_order\": 15\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/designer/category?showDecoded=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "designer",
+                "category"
+              ],
+              "query": [
+                {
+                  "key": "showDecoded",
+                  "value": "1",
+                  "description": "Get unencrypted response for testing"
+                }
+              ]
+            },
+            "description": "Create a new designer category"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Photography\",\n  \"description\": \"Photography and photo editing\",\n  \"icon\": \"fa-camera\",\n  \"sort_order\": 15\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/admin/designer/category?showDecoded=1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "designer",
+                    "category"
+                  ],
+                  "query": [
+                    {
+                      "key": "showDecoded",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Category created successfully\",\n  \"category\": {\n    \"id\": 15,\n    \"name\": \"Photography\",\n    \"slug\": \"photography\",\n    \"description\": \"Photography and photo editing\",\n    \"icon\": \"fa-camera\",\n    \"sort_order\": 15,\n    \"is_active\": true,\n    \"created_at\": \"2026-02-23T10:30:00.000000Z\",\n    \"updated_at\": \"2026-02-23T10:30:00.000000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Photography & Editing\",\n  \"description\": \"Professional photography and photo editing\",\n  \"icon\": \"fa-camera-retro\",\n  \"sort_order\": 15\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/designer/category/15?showDecoded=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "designer",
+                "category",
+                "15"
+              ],
+              "query": [
+                {
+                  "key": "showDecoded",
+                  "value": "1",
+                  "description": "Get unencrypted response for testing"
+                }
+              ]
+            },
+            "description": "Update an existing category"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Photography & Editing\",\n  \"description\": \"Professional photography and photo editing\",\n  \"icon\": \"fa-camera-retro\",\n  \"sort_order\": 15\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/admin/designer/category/15?showDecoded=1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "designer",
+                    "category",
+                    "15"
+                  ],
+                  "query": [
+                    {
+                      "key": "showDecoded",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Category updated successfully\",\n  \"category\": {\n    \"id\": 15,\n    \"name\": \"Photography & Editing\",\n    \"slug\": \"photography-editing\",\n    \"description\": \"Professional photography and photo editing\",\n    \"icon\": \"fa-camera-retro\",\n    \"sort_order\": 15,\n    \"is_active\": true,\n    \"created_at\": \"2026-02-23T10:30:00.000000Z\",\n    \"updated_at\": \"2026-02-23T10:35:00.000000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Toggle Category Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/designer/category/15/toggle?showDecoded=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "designer",
+                "category",
+                "15",
+                "toggle"
+              ],
+              "query": [
+                {
+                  "key": "showDecoded",
+                  "value": "1",
+                  "description": "Get unencrypted response for testing"
+                }
+              ]
+            },
+            "description": "Toggle category active/inactive status"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/designer/category/15/toggle?showDecoded=1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "designer",
+                    "category",
+                    "15",
+                    "toggle"
+                  ],
+                  "query": [
+                    {
+                      "key": "showDecoded",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Category status updated successfully\",\n  \"category\": {\n    \"id\": 15,\n    \"name\": \"Photography & Editing\",\n    \"slug\": \"photography-editing\",\n    \"description\": \"Professional photography and photo editing\",\n    \"icon\": \"fa-camera-retro\",\n    \"sort_order\": 15,\n    \"is_active\": false,\n    \"created_at\": \"2026-02-23T10:30:00.000000Z\",\n    \"updated_at\": \"2026-02-23T10:40:00.000000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/designer/category/15?showDecoded=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "designer",
+                "category",
+                "15"
+              ],
+              "query": [
+                {
+                  "key": "showDecoded",
+                  "value": "1",
+                  "description": "Get unencrypted response for testing"
+                }
+              ]
+            },
+            "description": "Delete a category permanently"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/admin/designer/category/15?showDecoded=1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "designer",
+                    "category",
+                    "15"
+                  ],
+                  "query": [
+                    {
+                      "key": "showDecoded",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 200,\n  \"success\": true,\n  \"msg\": \"Category deleted successfully\",\n  \"deleted_id\": 15\n}"
+            }
+          ]
         }
       ]
     }

@@ -1549,12 +1549,11 @@ class OrderUserApiController extends AppBaseController
             $transactionLog->whatsapp_template_count = 0;
             $transactionLog->followup_call = 0;
 
-            // Set currency and price
+            // Set currency and price (same as OrderUserController)
+            $transactionLog->currency_code = $validated['currency_code'];
             if (!strcasecmp($validated['currency_code'], "INR")) {
-                $transactionLog->currency_code = "Rs";
                 $transactionLog->price_amount = $plan->price;
             } else {
-                $transactionLog->currency_code = "$";
                 $transactionLog->price_amount = $plan->price_dollar;
             }
 
